@@ -108,15 +108,26 @@ def printXmlNode(xmlNode,  parentId='',  aboveOffset=None,  belowOffset=None,  l
 	return id
 
 
-def processChildren(root,  motherId):
+def processChildren(root,  motherId,  ignoreXmlElements=[]):
 	children = root.findall('child')
 	childCount = len(children)
 	childNr = 1
 	for child in children:
-		text = getChildDescription(child)
+		printChild = True
+		for element in ignoreXmlElements:
+			if element == child:
+				printChild = False
+				break
+		
 		id = getUniqId(child)
-		printChildTopDown(id, text,  motherId,  childCount,  childNr)
-		processChildren(child,  id)
+		
+		# only print the child,
+		# if it is not a part of the ignore list
+		if printChild:
+			text = getChildDescription(child)
+			printChildTopDown(id, text,  motherId,  childCount,  childNr)
+		
+		processChildren(child,  id,  ignoreXmlElements)
 		childNr += 1
 
 
@@ -162,11 +173,7 @@ for child in children:
 		# if there are more than one spouse tag
 		# but do not use relative offset and try to use absolut positions
 		
-		
-		# TODO use find instead
-		#spouseTag = rootChildrenList[0].find('spouse')
-		#if spouseTag:
-		marriedChild = rootChildrenList.pop(0)
+		marriedChild = rootChildrenList[0]
 		spouseTag = marriedChild.findall('spouse')
 		parentId = None
 		if len(spouseTag) >= 1:
@@ -178,13 +185,14 @@ for child in children:
 		
 		# print and conect all children of rootChildrenList
 		parentId = printXmlNode(marriedChild,  parentId,  None,  None,  None,  0.2)
-		for rootChild in rootChildrenList:
-			parentId = printXmlNode(rootChild,  parentId,  0.5)
+		for i in range(1, len(rootChildrenList)):
+			parentId = printXmlNode(rootChildrenList[i],  parentId,  0.5)
 		
 		# TODO if it is married conect to given id
 		# buttonUp geht nicht, da ein Mann mehrmals heiraten kann
 		# und damit sich mit mehreren Frauen verbinden müsste
-		#printChildTopDown(id, text,  parentId,  1,  1)
+		
+		processChildren(child,  id,  rootChildrenList)
 	else:
 		printNode(id,  text)
 		processChildren(child,  id)

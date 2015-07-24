@@ -9,9 +9,10 @@
 		<child name="Kind 3"></child>
 	</child>
 	
-	<child id="grand1" name="Grossvater" birth="15.04.2089">
-		<child id="father1" name="Vater" birth="15.04.1901">
+	<child name="Grossmutter" birth="15.04.1978">
+		<child name="Vater" birth="15.04.1992">
 			<spouse id="mother1" wedding="15.07.1999"/>
 		</child>
+		<child name="Vater2" birth="15.04.1993"></child>
 	</child>
 </family>
