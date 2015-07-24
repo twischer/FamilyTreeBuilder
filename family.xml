@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<family>
+	<child id="mother1" geschlecht="woman" name="Mutter" birth="15.04.2001">
+		<child name="Kind 1">
+			<child name="Kind 1.1"></child>
+			<child name="Kind 1.2"></child>
+		</child>
+		<child name="Kind 2"></child>
+		<child name="Kind 3"></child>
+	</child>
+	
+	<child id="grand1" name="Grossvater" birth="15.04.2089">
+		<child id="father1" name="Vater" birth="15.04.1901">
+			<spouse id="mother1" wedding="15.07.1999"/>
+		</child>
+	</child>
+</family>
