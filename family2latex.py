@@ -7,7 +7,7 @@
 import xml.etree.ElementTree as ET
 
 
-def printChild(id,  text,  parentId='',  childCount=0,  childNr=0, topDown=True, onlyConnect=False):
+def printChild(xmlNode,  parentId=None,  childCount=0,  childNr=0, topDown=True, onlyConnect=False):
 	# child 1 of 1
 	leftOffset = 0.0
 	rightOffset = 0.0
@@ -38,18 +38,21 @@ def printChild(id,  text,  parentId='',  childCount=0,  childNr=0, topDown=True,
 	else:
 		aboveOffset = 0.5
 	
-	printNode(id,  text,  parentId,  aboveOffset,  belowOffset,  leftOffset,  rightOffset, onlyConnect)
+	return printNode(xmlNode,  parentId,  aboveOffset,  belowOffset,  leftOffset,  rightOffset, onlyConnect)
 
 
-def  printNode(id,  text,  parentId='',  aboveOffset=None,  belowOffset=None,  leftOffset=None,  rightOffset=None, onlyConnect=False):
+def  printNode(xmlNode,  parentId=None,  aboveOffset=None,  belowOffset=None,  leftOffset=None,  rightOffset=None, onlyConnect=False):
+	id = getUniqId(xmlNode)
 	if not onlyConnect:
+		text = getChildDescription(xmlNode)
+	
 		# print tkiz node similar to
 		# \node[below left=0.5 and 0.2 of mother1] (child1) {Kind 1};
 		print('\t\\node',  end="") 
 		
 		# only use relative postioning,
 		# if a mother exists
-		if parentId != '':
+		if parentId is not None:
 			print('[',  end="")
 			# define which directions the rel pos should have
 			relPosOffsets = []
@@ -74,7 +77,7 @@ def  printNode(id,  text,  parentId='',  aboveOffset=None,  belowOffset=None,  l
 	
 	# only print connection line,
 	# if a mother exists
-	if parentId != '':
+	if parentId is not None:
 		if belowOffset:
 			# print tikiz line for connecting mother with the child
 			# \draw[thick] (mother1) |- ($ (child1.north) + (0,0.25) $) -- (child1);
@@ -84,6 +87,8 @@ def  printNode(id,  text,  parentId='',  aboveOffset=None,  belowOffset=None,  l
 			# print tikiz line for connecting married persons
 			# \draw[thick] (mother1) -- (father1);
 			print('\t\\draw[thick] (' + parentId + ') -- (' + id + ');')
+			
+	return id
 
 
 
@@ -104,22 +109,15 @@ def getUniqId(xmlNode):
 	return id
 
 
-def printXmlNode(xmlNode,  parentId='',  married=False):
-	text = getChildDescription(xmlNode)
-	id = getUniqId(xmlNode)
-	if married:
-		printNode(id,  text,  parentId,  None,  None,  None,  0.2)
-	else:
-		children = xmlNode.findall('child')
-		childCount = len(children)
-		# if the children processed buttom up
-		# the positioned child should always the 
-		# left one 
-		childNr = childCount
-		topDown = False
-		printChild(id,  text,  parentId,  childCount,  childNr, topDown)
-
-	return id
+def printXmlNode(xmlNode,  parentId=None):
+	children = xmlNode.findall('child')
+	childCount = len(children)
+	# if the children processed buttom up
+	# the positioned child should always the 
+	# left one 
+	childNr = childCount
+	topDown = False
+	return printChild(xmlNode,  parentId,  childCount,  childNr, topDown)
 
 
 def processChildren(root,  motherId,  ignoreXmlElements=[]):
@@ -133,13 +131,10 @@ def processChildren(root,  motherId,  ignoreXmlElements=[]):
 				childAlreadyExists = True
 				break
 		
-		id = getUniqId(child)
-		
 		# only print the child,
 		# if it is not a part of the ignore list
 		# if it is a part of the ignore list print only the connection
-		text = getChildDescription(child)
-		printChild(id, text,  motherId,  childCount,  childNr, True, childAlreadyExists)
+		id = printChild(child,  motherId,  childCount,  childNr, True, childAlreadyExists)
 		
 		processChildren(child,  id,  ignoreXmlElements)
 		childNr += 1
@@ -168,9 +163,6 @@ root = tree.getroot()
 children = root.findall('child')
 doButtomUp = False
 for child in children:
-	text = getChildDescription(child)
-	id = getUniqId(child)
-	
 	if doButtomUp:
 		rootChildrenList = findRootPath(child)
 		if not rootChildrenList:
@@ -198,7 +190,7 @@ for child in children:
 			exit(-1)
 		
 		# print and conect all children of rootChildrenList
-		parentId = printXmlNode(marriedChild,  parentId,  True)
+		parentId = printNode(marriedChild,  parentId,  None,  None,  None,  0.2)
 		for i in range(1, len(rootChildrenList)):
 			parentId = printXmlNode(rootChildrenList[i],  parentId)
 		
@@ -206,9 +198,9 @@ for child in children:
 		# buttonUp geht nicht, da ein Mann mehrmals heiraten kann
 		# und damit sich mit mehreren Frauen verbinden müsste
 		
-		processChildren(child,  id,  rootChildrenList)
+		processChildren(child,  parentId,  rootChildrenList)
 	else:
-		printNode(id,  text)
+		id = printNode(child)
 		processChildren(child,  id)
 	
 	# apend all other root children expecting the first one with a
