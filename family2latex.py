@@ -7,7 +7,7 @@
 import xml.etree.ElementTree as ET
 
 
-def printChildTopDown(id,  text,  parentId='',  childCount=0,  childNr=0):
+def printChild(id,  text,  parentId='',  childCount=0,  childNr=0, topDown=True, onlyConnect=False):
 	# child 1 of 1
 	leftOffset = 0.0
 	rightOffset = 0.0
@@ -31,52 +31,56 @@ def printChildTopDown(id,  text,  parentId='',  childCount=0,  childNr=0):
 		else:
 			raise Exception('ChildNr > ChildCount')
 			
-	printNode(id,  text,  parentId,  None,  0.5,  leftOffset,  rightOffset)
-
-
-def  printNode(id,  text,  parentId='',  aboveOffset=None,  belowOffset=None,  leftOffset=None,  rightOffset=None):
-	# print tkiz node similar to
-	# \node[below left=0.5 and 0.2 of mother1] (child1) {Kind 1};
-	print('\t\\node',  end="") 
+	aboveOffset = None;
+	belowOffset = None;
+	if topDown:
+		belowOffset = 0.5
+	else:
+		aboveOffset = 0.5
 	
-	# only use relative postioning,
-	# if a mother exists
-	if parentId != '':
-		print('[',  end="")
-		# define which directions the rel pos should have
-		relPosOffsets = []
-		if aboveOffset:
-			print('above',  end="")
-			relPosOffsets.append( str(aboveOffset) )
-		if belowOffset:
-			print(' below',  end="")
-			relPosOffsets.append( str(belowOffset) )
-		if leftOffset:
-			print(' left',  end="")
-			relPosOffsets.append( str(leftOffset) )
-		if rightOffset:
-			print(' right',  end="")
-			relPosOffsets.append( str(rightOffset) )
+	printNode(id,  text,  parentId,  aboveOffset,  belowOffset,  leftOffset,  rightOffset, onlyConnect)
+
+
+def  printNode(id,  text,  parentId='',  aboveOffset=None,  belowOffset=None,  leftOffset=None,  rightOffset=None, onlyConnect=False):
+	if not onlyConnect:
+		# print tkiz node similar to
+		# \node[below left=0.5 and 0.2 of mother1] (child1) {Kind 1};
+		print('\t\\node',  end="") 
 		
-		relPosOffString = ' and '.join(relPosOffsets)
-		print('=' + relPosOffString + ' of ' + parentId + '] ',  end="")
+		# only use relative postioning,
+		# if a mother exists
+		if parentId != '':
+			print('[',  end="")
+			# define which directions the rel pos should have
+			relPosOffsets = []
+			if aboveOffset:
+				print('above',  end="")
+				relPosOffsets.append( str(aboveOffset) )
+			if belowOffset:
+				print(' below',  end="")
+				relPosOffsets.append( str(belowOffset) )
+			if leftOffset:
+				print(' left',  end="")
+				relPosOffsets.append( str(leftOffset) )
+			if rightOffset:
+				print(' right',  end="")
+				relPosOffsets.append( str(rightOffset) )
+			
+			relPosOffString = ' and '.join(relPosOffsets)
+			print('=' + relPosOffString + ' of ' + parentId + '] ',  end="")
 		
-	print('(' + id + ') {' + text + '};')
-		
+		print('(' + id + ') {' + text + '};')
+	
+	
 	# only print connection line,
 	# if a mother exists
 	if parentId != '':
-		if aboveOffset:
-			# print tikiz line for connecting child with parent
-			# \draw[thick] (mother1) |- ($ (child1.south) + (0,0.25) $) -- (child1);
-			print('\t\\draw[thick] (' + id + ') |- ($ (',  end="")
-			print(parentId + '.north) + (0,0.25) $) -- (' + parentId + ');')
 		if belowOffset:
 			# print tikiz line for connecting mother with the child
 			# \draw[thick] (mother1) |- ($ (child1.north) + (0,0.25) $) -- (child1);
 			print('\t\\draw[thick] (' + parentId + ') |- ($ (',  end="")
 			print(id + '.north) + (0,0.25) $) -- (' + id + ');')
-		else:
+		elif aboveOffset is None:
 			# print tikiz line for connecting married persons
 			# \draw[thick] (mother1) -- (father1);
 			print('\t\\draw[thick] (' + parentId + ') -- (' + id + ');')
@@ -100,11 +104,21 @@ def getUniqId(xmlNode):
 	return id
 
 
-def printXmlNode(xmlNode,  parentId='',  aboveOffset=None,  belowOffset=None,  leftOffset=None,  rightOffset=None):
+def printXmlNode(xmlNode,  parentId='',  married=False):
 	text = getChildDescription(xmlNode)
 	id = getUniqId(xmlNode)
-	printNode(id,  text,  parentId,  aboveOffset,  belowOffset,  leftOffset,  rightOffset)
-	
+	if married:
+		printNode(id,  text,  parentId,  None,  None,  None,  0.2)
+	else:
+		children = xmlNode.findall('child')
+		childCount = len(children)
+		# if the children processed buttom up
+		# the positioned child should always the 
+		# left one 
+		childNr = childCount
+		topDown = False
+		printChild(id,  text,  parentId,  childCount,  childNr, topDown)
+
 	return id
 
 
@@ -113,19 +127,19 @@ def processChildren(root,  motherId,  ignoreXmlElements=[]):
 	childCount = len(children)
 	childNr = 1
 	for child in children:
-		printChild = True
+		childAlreadyExists = False
 		for element in ignoreXmlElements:
 			if element == child:
-				printChild = False
+				childAlreadyExists = True
 				break
 		
 		id = getUniqId(child)
 		
 		# only print the child,
 		# if it is not a part of the ignore list
-		if printChild:
-			text = getChildDescription(child)
-			printChildTopDown(id, text,  motherId,  childCount,  childNr)
+		# if it is a part of the ignore list print only the connection
+		text = getChildDescription(child)
+		printChild(id, text,  motherId,  childCount,  childNr, True, childAlreadyExists)
 		
 		processChildren(child,  id,  ignoreXmlElements)
 		childNr += 1
@@ -184,9 +198,9 @@ for child in children:
 			exit(-1)
 		
 		# print and conect all children of rootChildrenList
-		parentId = printXmlNode(marriedChild,  parentId,  None,  None,  None,  0.2)
+		parentId = printXmlNode(marriedChild,  parentId,  True)
 		for i in range(1, len(rootChildrenList)):
-			parentId = printXmlNode(rootChildrenList[i],  parentId,  0.5)
+			parentId = printXmlNode(rootChildrenList[i],  parentId)
 		
 		# TODO if it is married conect to given id
 		# buttonUp geht nicht, da ein Mann mehrmals heiraten kann

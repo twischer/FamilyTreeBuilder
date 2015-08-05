@@ -14,5 +14,6 @@
 			<spouse id="mother1" wedding="15.07.1999"/>
 		</child>
 		<child name="Vater2" birth="15.04.1993"></child>
+		<child name="Vater3" birth="15.04.1994"></child>
 	</child>
 </family>

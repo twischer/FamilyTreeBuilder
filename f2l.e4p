@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-5.1.dtd">
 <!-- eric5 project file for project f2l -->
-<!-- Saved: 2015-07-24, 17:19:30 -->
+<!-- Saved: 2015-07-24, 23:02:50 -->
 <!-- Copyright (C) 2015 ,  -->
 <Project version="5.1">
   <Language></Language>
@@ -12,9 +12,9 @@
   <Version>0.1</Version>
   <Author></Author>
   <Email></Email>
+  <Eol index="-1"/>
   <Sources>
     <Source>family2latex.py</Source>
-    <Source>__init__.py</Source>
   </Sources>
   <Forms/>
   <Translations/>
