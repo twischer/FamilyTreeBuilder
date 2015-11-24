@@ -94,7 +94,10 @@ def  printNode(xmlNode,  parentId=None,  aboveOffset=None,  belowOffset=None,  l
 
 def getChildDescription(xmlNode):
 	text = xmlNode.get('name')
-	text += xmlNode.get('birth',  'UNKOWN')
+	# TODO newline 
+	text += " "
+	text += "* " + xmlNode.get('birth',  'UNKOWN')
+	# TODO death und places
 	return text
 
 
@@ -104,8 +107,16 @@ def getUniqId(xmlNode):
 	if not id:
 		text = getChildDescription(xmlNode)
 		id = text.replace(" ",  "")
+		# TODO lower case the hole id
+		
 		id = id.replace(".",  "")
-		# TODO replace ä ü ö
+		id = id.replace(",",  "")
+		# TODO replace all >=8 bit characters
+		# and remove special charachters
+		id = id.replace("ä",  "ae")
+		id = id.replace("ö",  "oe")
+		id = id.replace("ü",  "ue")
+		
 	return id
 
 
@@ -156,12 +167,13 @@ def findRootPath(parent):
 		return None
 
 
-print('\\begin{tikzpicture}[node distance=0.2,auto,nodes={inner sep=0.3em, minimum height=3em, rectangle,draw=black, text centered,text width=3cm}]')
+print('\\begin{tikzpicture}[node distance=0.2,auto,nodes={inner sep=0.3em, minimum height=3em, rectangle,draw=black, text centered,text width=4cm}]')
 
 tree = ET.parse('family.xml')
 root = tree.getroot()
 children = root.findall('child')
 doButtomUp = False
+alreadyMarriedIds = []
 for child in children:
 	if doButtomUp:
 		rootChildrenList = findRootPath(child)
@@ -180,8 +192,9 @@ for child in children:
 		# but do not use relative offset and try to use absolut positions
 		
 		marriedChild = rootChildrenList[0]
-		spouseTag = marriedChild.findall('spouse')
+		
 		parentId = None
+		spouseTag = marriedChild.findall('spouse')
 		if len(spouseTag) >= 1:
 			parentId = spouseTag[0].get('id',  None)
 		
@@ -189,12 +202,34 @@ for child in children:
 			print("ERR: Spouse tag does not contain an id attribute!")
 			exit(-1)
 		
-		# print and conect all children of rootChildrenList
-		parentId = printNode(marriedChild,  parentId,  None,  None,  None,  0.2)
+		# connect the hosband to the left
+		# if this woman has already married
+		marrieLeft = False
+		for i in range(0, len(alreadyMarriedIds)):
+			print('% checking ' + alreadyMarriedIds[i] + ' == ' + parentId);
+			if alreadyMarriedIds[i] == parentId:
+				print('% exists');
+				marrieLeft = True
+				break
+		
+		# save the id that it has a right nighbour
+		alreadyMarriedIds.append(parentId)
+		print('% adding ' + parentId);
+		
+		leftOffset = None
+		rightOffset = None
+		if marrieLeft:
+			leftOffset = 0.2
+		else:
+			rightOffset = 0.2
+		
+		
+		# print and connect all children of rootChildrenList
+		parentId = printNode(marriedChild,  parentId,  None,  None,  leftOffset,  rightOffset)
 		for i in range(1, len(rootChildrenList)):
 			parentId = printXmlNode(rootChildrenList[i],  parentId)
 		
-		# TODO if it is married conect to given id
+		# TODO if it is married connect to given id
 		# buttonUp geht nicht, da ein Mann mehrmals heiraten kann
 		# und damit sich mit mehreren Frauen verbinden müsste
 		
