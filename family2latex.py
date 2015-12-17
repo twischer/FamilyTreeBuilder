@@ -167,7 +167,7 @@ def findRootPath(parent):
 		return None
 
 
-print('\\begin{tikzpicture}[node distance=0.2,auto,nodes={inner sep=0.3em, minimum height=3em, rectangle,draw=black, text centered,text width=4cm}]')
+print('\\begin{tikzpicture}[align=center,node distance=0.2,auto,nodes={inner sep=0.3em, minimum height=3em, rectangle,draw=black, text centered,text width=4cm}]')
 
 tree = ET.parse('family.xml')
 root = tree.getroot()
@@ -206,15 +206,12 @@ for child in children:
 		# if this woman has already married
 		marrieLeft = False
 		for i in range(0, len(alreadyMarriedIds)):
-			print('% checking ' + alreadyMarriedIds[i] + ' == ' + parentId);
 			if alreadyMarriedIds[i] == parentId:
-				print('% exists');
 				marrieLeft = True
 				break
 		
 		# save the id that it has a right nighbour
 		alreadyMarriedIds.append(parentId)
-		print('% adding ' + parentId);
 		
 		leftOffset = None
 		rightOffset = None
