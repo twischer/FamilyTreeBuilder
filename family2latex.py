@@ -38,34 +38,35 @@ class Node :
 		pass
 
 
-def printChild(childNode,  parentId=None,  childOffset=0, topDown=True):
-	# child 1 of 1
+def printChild(childNode,  parentNode=None,  rowOffset=1):
 	leftOffset = 0.0
 	rightOffset = 0.0
 	
-	if childOffset < 0:
+	if parentNode is not None:
+		childOffset = childNode.column - parentNode.column
+		if childOffset < 0:
 			leftOffset = NODE_HSPACE + (-childOffset - 1) * (NODE_WIDTH + NODE_HSPACE)
-	elif childOffset > 0:
+		elif childOffset > 0:
 			rightOffset = NODE_HSPACE + (childOffset - 1) * (NODE_WIDTH + NODE_HSPACE)
 			
 	aboveOffset = None;
 	belowOffset = None;
-	if topDown:
-		belowOffset = 0.5
-	else:
-		aboveOffset = 0.5
+	if rowOffset > 0:
+		belowOffset = NODE_VSPACE
+	if rowOffset < 0:
+		aboveOffset = NODE_VSPACE
 	
-	return printNode(childNode,  parentId,  aboveOffset,  belowOffset,  leftOffset,  rightOffset)
+	return printNode(childNode,  parentNode,  aboveOffset,  belowOffset,  leftOffset,  rightOffset)
 
 
-def  printNode(childNode,  parentId=None,  aboveOffset=None,  belowOffset=None,  leftOffset=None,  rightOffset=None):
+def  printNode(childNode,  parentNode=None,  aboveOffset=None,  belowOffset=None,  leftOffset=None,  rightOffset=None):
 	# print tkiz node similar to
 	# \node[below left=0.5 and 0.2 of mother1] (child1) {Kind 1};
 	print('\t\\node',  end="") 
 	
 	# only use relative postioning,
 	# if a mother exists
-	if parentId is not None:
+	if parentNode is not None:
 		print('[',  end="")
 		# define which directions the rel pos should have
 		relPosOffsets = []
@@ -83,7 +84,7 @@ def  printNode(childNode,  parentId=None,  aboveOffset=None,  belowOffset=None, 
 			relPosOffsets.append( str(rightOffset) )
 		
 		relPosOffString = ' and '.join(relPosOffsets)
-		print('=' + relPosOffString + ' of ' + parentId + '] ',  end="")
+		print('=' + relPosOffString + ' of ' + parentNode.id + '] ',  end="")
 	
 	print('(' + childNode.id + ') {' + childNode.text + '};')
 	
@@ -95,7 +96,7 @@ def connectParentChild(motherId,  childId):
 	print(childId + '.north) + (0,0.25) $) -- (' + childId + ');')
 	
 
-def connectSpouse(id1,  id2):
+def connectSpouses(id1,  id2):
 	# print tikiz line for connecting married persons
 	# \draw[thick] (mother1) -- (father1);
 	print('\t\\draw[thick] (' + id1 + ') -- (' + id2 + ');')
@@ -147,7 +148,7 @@ def processChildren(parentXml,  parentNode):
 		parentNode.spouses.append(spouseNode)
 		spouseNode.spouses.append(parentNode)
 	
-	# TODO fix all positions offsets of all upper persons if married
+	# TODO fix all position offsets of all upper persons if married
 	
 	# process children of this mother
 	childrenXml = parentXml.findall('child')
@@ -168,14 +169,27 @@ def printNodes(parentNode,  lastNode):
 		if childNode is lastNode:
 			continue
 		
-		printChild(childNode,  parentNode.id,  childNode.column - parentNode.column)
+		printChild(childNode,  parentNode)
 		connectParentChild(parentNode.id,  childNode.id)
 		printNodes(childNode,  parentNode)
 	
-#	# only process mother, if not comming from there
-#	if parentNode.mother is not lastNode:
-#		connectParentChild(parentNode.mother.id,  parentNode.id)
-#		printNodes(parentNode.mother,  parentNode)
+	# only process mother, if not comming from there
+	if (parentNode.mother is not None) and (parentNode.mother is not lastNode):
+		# print mother node and position inverse
+		# (one row above)
+		printChild(parentNode.mother,  parentNode,  -1)
+		connectParentChild(parentNode.mother.id,  parentNode.id)
+		printNodes(parentNode.mother,  parentNode)
+
+	for spouseNode in parentNode.spouses:
+		# do not run the same way back
+		if spouseNode is lastNode:
+			continue
+		# position in the same row
+		# column offset depends on colums of each spouse
+		printChild(spouseNode,  parentNode,  0)
+		connectSpouses(parentNode.id,  spouseNode.id)
+		printNodes(spouseNode,  parentNode)
 
 
 rootChildNode = None
