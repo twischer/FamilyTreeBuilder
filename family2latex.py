@@ -27,7 +27,8 @@ class Node :
 		self.id = getUniqId(xml)
 		self.text = getChildDescription(xml)
 		self.mother = mother
-		self.spouses = []
+		self.spouseRight = None
+		self.spouseLeft = None
 		self.children = []
 		self.column = 0
 		
@@ -36,6 +37,19 @@ class Node :
 		
 		allChildNodes.append(self)
 		pass
+	
+
+#	def getAllNeighbours(self):
+#		neighbours = []
+#		neighbours += self.children
+#		
+#		if self.spouseRight is not None:
+#			neighbours.append(self.spouseRight)
+#		if self.spouseLeft is not None:
+#			neighbours.append(self.spouseLeft)
+#		if self.mother is not None:
+#			neighbours.append(self.mother)
+#		return neighbours
 
 
 def printChild(childNode,  parentNode=None,  rowOffset=1):
@@ -143,20 +157,19 @@ def processChildren(parentXml,  parentNode):
 		if not spouseNode:
 			print("ERR: child with spouse ID not already defined!")
 			exit(-1)
-			
-		# connect spouses bidirectional
-		parentNode.spouses.append(spouseNode)
-		spouseNode.spouses.append(parentNode)
 		
 		# caluclate offset for setting both nodes on same position
 		columnOffset = spouseNode.column - parentNode.column
-		# update the column depending on the spouse of the other tree
-		spouseCount = len(spouseNode.spouses)
-		if spouseCount == 1:
-			# first spouse to the right
+	
+		if not spouseNode.spouseRight:
+			# connect spouses bidirectional to the right
+			spouseNode.spouseRight = parentNode
+			parentNode.spouseLeft = spouseNode
 			columnOffset += 1
-		elif spouseCount == 2:
-			# first spouse to the right
+		elif not spouseNode.spouseLeft:
+			# connect spouses bidirectional to the left
+			spouseNode.spouseLeft = parentNode
+			parentNode.spouseRight = spouseNode
 			columnOffset -= 1
 		else:
 			print("ERR: Not more than 2 spouses are supported!")
@@ -198,7 +211,7 @@ def printNodes(parentNode,  lastNode):
 		if childNode is lastNode:
 			continue
 		
-		printChild(childNode,  parentNode)
+		printChild(childNode,  parentNode,  1)
 		connectParentChild(parentNode.id,  childNode.id)
 		printNodes(childNode,  parentNode)
 	
@@ -209,16 +222,22 @@ def printNodes(parentNode,  lastNode):
 		printChild(parentNode.mother,  parentNode,  -1)
 		connectParentChild(parentNode.mother.id,  parentNode.id)
 		printNodes(parentNode.mother,  parentNode)
+	
+	printNodesSpouses(parentNode.spouseLeft,  parentNode,  lastNode)
+	printNodesSpouses(parentNode.spouseRight,  parentNode,  lastNode)
 
-	for spouseNode in parentNode.spouses:
-		# do not run the same way back
-		if spouseNode is lastNode:
-			continue
-		# position in the same row
-		# column offset depends on colums of each spouse
-		printChild(spouseNode,  parentNode,  0)
-		connectSpouses(parentNode.id,  spouseNode.id)
-		printNodes(spouseNode,  parentNode)
+
+def printNodesSpouses(spouseNode,  parentNode,  lastNode):
+	if (not spouseNode):
+		return
+	# do not run the same way back
+	if spouseNode is lastNode:
+		return
+	# position in the same row
+	# column offset depends on colums of each spouse
+	printChild(spouseNode,  parentNode,  0)
+	connectSpouses(parentNode.id,  spouseNode.id)
+	printNodes(spouseNode,  parentNode)
 
 
 rootChildNode = None
