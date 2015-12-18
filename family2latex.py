@@ -147,8 +147,22 @@ def processChildren(parentXml,  parentNode):
 		# connect spouses bidirectional
 		parentNode.spouses.append(spouseNode)
 		spouseNode.spouses.append(parentNode)
-	
-	# TODO fix all position offsets of all upper persons if married
+		
+		# caluclate offset for setting both nodes on same position
+		columnOffset = spouseNode.column - parentNode.column
+		# update the column depending on the spouse of the other tree
+		spouseCount = len(spouseNode.spouses)
+		if spouseCount == 1:
+			# first spouse to the right
+			columnOffset += 1
+		elif spouseCount == 2:
+			# first spouse to the right
+			columnOffset -= 1
+		else:
+			print("ERR: Not more than 2 spouses are supported!")
+			exit(-1)
+		
+		updateColumnTillSpouse(spouseNode,  parentNode,  columnOffset)
 	
 	# process children of this mother
 	childrenXml = parentXml.findall('child')
@@ -161,6 +175,21 @@ def processChildren(parentXml,  parentNode):
 		parentNode.children.append(childNode)
 		processChildren(childXml,  childNode)
 		childNr += 1
+
+
+def updateColumnTillSpouse(lastNode,  currentNode,  columnOffset):
+	if not currentNode:
+		return
+	
+	currentNode.column += columnOffset
+	
+	for childNode in currentNode.children:
+		# do not run the same way back
+		if childNode is not lastNode:
+			updateColumnTillSpouse(currentNode,  childNode,  columnOffset)
+	
+	if (currentNode.mother is not None) and (currentNode.mother is not lastNode):
+		updateColumnTillSpouse(currentNode,  currentNode.mother,  columnOffset)
 
 
 def printNodes(parentNode,  lastNode):
