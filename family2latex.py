@@ -7,7 +7,19 @@
 import xml.etree.ElementTree as ET
 
 
-def printChild(xmlNode,  parentId=None,  childCount=0,  childNr=0, topDown=True, onlyConnect=False):
+class Node :
+	def __init__(self,  xml,  mother=None) :
+		self.id = getUniqId(xml)
+		self.text = getChildDescription(xml)
+		self.mother = mother
+		self.married = []
+		self.children = []
+		self.column = 0
+		pass
+
+
+
+def printChild(childNode,  parentId=None,  childCount=0,  childNr=0, topDown=True):
 	# child 1 of 1
 	leftOffset = 0.0
 	rightOffset = 0.0
@@ -38,58 +50,50 @@ def printChild(xmlNode,  parentId=None,  childCount=0,  childNr=0, topDown=True,
 	else:
 		aboveOffset = 0.5
 	
-	return printNode(xmlNode,  parentId,  aboveOffset,  belowOffset,  leftOffset,  rightOffset, onlyConnect)
+	return printNode(childNode,  parentId,  aboveOffset,  belowOffset,  leftOffset,  rightOffset)
 
 
-def  printNode(xmlNode,  parentId=None,  aboveOffset=None,  belowOffset=None,  leftOffset=None,  rightOffset=None, onlyConnect=False):
-	id = getUniqId(xmlNode)
-	if not onlyConnect:
-		text = getChildDescription(xmlNode)
+def  printNode(childNode,  parentId=None,  aboveOffset=None,  belowOffset=None,  leftOffset=None,  rightOffset=None):
+	# print tkiz node similar to
+	# \node[below left=0.5 and 0.2 of mother1] (child1) {Kind 1};
+	print('\t\\node',  end="") 
 	
-		# print tkiz node similar to
-		# \node[below left=0.5 and 0.2 of mother1] (child1) {Kind 1};
-		print('\t\\node',  end="") 
-		
-		# only use relative postioning,
-		# if a mother exists
-		if parentId is not None:
-			print('[',  end="")
-			# define which directions the rel pos should have
-			relPosOffsets = []
-			if aboveOffset:
-				print('above',  end="")
-				relPosOffsets.append( str(aboveOffset) )
-			if belowOffset:
-				print(' below',  end="")
-				relPosOffsets.append( str(belowOffset) )
-			if leftOffset:
-				print(' left',  end="")
-				relPosOffsets.append( str(leftOffset) )
-			if rightOffset:
-				print(' right',  end="")
-				relPosOffsets.append( str(rightOffset) )
-			
-			relPosOffString = ' and '.join(relPosOffsets)
-			print('=' + relPosOffString + ' of ' + parentId + '] ',  end="")
-		
-		print('(' + id + ') {' + text + '};')
-	
-	
-	# only print connection line,
+	# only use relative postioning,
 	# if a mother exists
 	if parentId is not None:
+		print('[',  end="")
+		# define which directions the rel pos should have
+		relPosOffsets = []
+		if aboveOffset:
+			print('above',  end="")
+			relPosOffsets.append( str(aboveOffset) )
 		if belowOffset:
-			# print tikiz line for connecting mother with the child
-			# \draw[thick] (mother1) |- ($ (child1.north) + (0,0.25) $) -- (child1);
-			print('\t\\draw[thick] (' + parentId + ') |- ($ (',  end="")
-			print(id + '.north) + (0,0.25) $) -- (' + id + ');')
-		elif aboveOffset is None:
-			# print tikiz line for connecting married persons
-			# \draw[thick] (mother1) -- (father1);
-			print('\t\\draw[thick] (' + parentId + ') -- (' + id + ');')
-			
-	return id
+			print(' below',  end="")
+			relPosOffsets.append( str(belowOffset) )
+		if leftOffset:
+			print(' left',  end="")
+			relPosOffsets.append( str(leftOffset) )
+		if rightOffset:
+			print(' right',  end="")
+			relPosOffsets.append( str(rightOffset) )
+		
+		relPosOffString = ' and '.join(relPosOffsets)
+		print('=' + relPosOffString + ' of ' + parentId + '] ',  end="")
+	
+	print('(' + childNode.id + ') {' + childNode.text + '};')
+	
+	
+def connectParentChild(motherId,  childId):
+	# print tikiz line for connecting mother with the child
+	# \draw[thick] (mother1) |- ($ (child1.north) + (0,0.25) $) -- (child1);
+	print('\t\\draw[thick] (' + motherId + ') |- ($ (',  end="")
+	print(childId + '.north) + (0,0.25) $) -- (' + childId + ');')
+	
 
+def connectMarried(id1,  id2):
+	# print tikiz line for connecting married persons
+	# \draw[thick] (mother1) -- (father1);
+	print('\t\\draw[thick] (' + id1 + ') -- (' + id2 + ');')
 
 
 def getChildDescription(xmlNode):
@@ -120,123 +124,58 @@ def getUniqId(xmlNode):
 	return id
 
 
-def printXmlNode(xmlNode,  parentId=None):
-	children = xmlNode.findall('child')
-	childCount = len(children)
-	# if the children processed buttom up
-	# the positioned child should always the 
-	# left one 
-	childNr = childCount
-	topDown = False
-	return printChild(xmlNode,  parentId,  childCount,  childNr, topDown)
+def processChildren(parentXml,  parentNode):
+	childrenXml = parentXml.findall('child')
+	for childXml in childrenXml:
+		childNode = Node(childXml,  parentNode)
+		parentNode.children.append(childNode)
+		processChildren(childXml,  childNode)
+		
 
 
-def processChildren(root,  motherId,  ignoreXmlElements=[]):
-	children = root.findall('child')
-	childCount = len(children)
+#def findRootPath(parent):
+#	if parent.find('spouse') is not None:
+#		subRootChildrenList = []
+#		subRootChildrenList.append(parent)
+#		return subRootChildrenList
+#	else:
+#		children = parent.findall('child')
+#		for child in children:
+#			# check childs of this child for spouse tag
+#			subRootChildrenList = findRootPath(child)
+#			if subRootChildrenList:
+#				subRootChildrenList.append(parent)
+#				return subRootChildrenList
+#		return None
+
+
+def printNodes(parentNode):
+	childCount = len(parentNode.children)
 	childNr = 1
-	for child in children:
-		childAlreadyExists = False
-		for element in ignoreXmlElements:
-			if element == child:
-				childAlreadyExists = True
-				break
-		
-		# only print the child,
-		# if it is not a part of the ignore list
-		# if it is a part of the ignore list print only the connection
-		id = printChild(child,  motherId,  childCount,  childNr, True, childAlreadyExists)
-		
-		processChildren(child,  id,  ignoreXmlElements)
+	for childNode in parentNode.children:
+		printChild(childNode,  parentNode.id,  childCount,  childNr)
+		connectParentChild(parentNode.id,  childNode.id)
+		printNodes(childNode)
 		childNr += 1
 
 
-def findRootPath(parent):
-	if parent.find('spouse') is not None:
-		subRootChildrenList = []
-		subRootChildrenList.append(parent)
-		return subRootChildrenList
-	else:
-		children = parent.findall('child')
-		for child in children:
-			# check childs of this child for spouse tag
-			subRootChildrenList = findRootPath(child)
-			if subRootChildrenList:
-				subRootChildrenList.append(parent)
-				return subRootChildrenList
-		return None
 
-
-print('\\begin{tikzpicture}[align=center,node distance=0.2,auto,nodes={inner sep=0.3em, minimum height=3em, rectangle,draw=black, text centered,text width=4cm}]')
+rootChildNode = None
 
 tree = ET.parse('family.xml')
 root = tree.getroot()
-children = root.findall('child')
-doButtomUp = False
-alreadyMarriedIds = []
-for child in children:
-	if doButtomUp:
-		rootChildrenList = findRootPath(child)
-		if not rootChildrenList:
-			print("ERR: No spouse tag found in root child! "
-				"Do not know how to connect other root child trees with first root child tree.")
-			exit(-1)
-		
-#		# For debugging
-#		for rootChild in rootChildrenList:
-#			childText = getChildDescription(rootChild)
-#			print("Spouse " + childText)
-		
-		# TODO print connection line, too
-		# if there are more than one spouse tag
-		# but do not use relative offset and try to use absolut positions
-		
-		marriedChild = rootChildrenList[0]
-		
-		parentId = None
-		spouseTag = marriedChild.findall('spouse')
-		if len(spouseTag) >= 1:
-			parentId = spouseTag[0].get('id',  None)
-		
-		if not parentId:
-			print("ERR: Spouse tag does not contain an id attribute!")
-			exit(-1)
-		
-		# connect the hosband to the left
-		# if this woman has already married
-		marrieLeft = False
-		for i in range(0, len(alreadyMarriedIds)):
-			if alreadyMarriedIds[i] == parentId:
-				marrieLeft = True
-				break
-		
-		# save the id that it has a right nighbour
-		alreadyMarriedIds.append(parentId)
-		
-		leftOffset = None
-		rightOffset = None
-		if marrieLeft:
-			leftOffset = 0.2
-		else:
-			rightOffset = 0.2
-		
-		
-		# print and connect all children of rootChildrenList
-		parentId = printNode(marriedChild,  parentId,  None,  None,  leftOffset,  rightOffset)
-		for i in range(1, len(rootChildrenList)):
-			parentId = printXmlNode(rootChildrenList[i],  parentId)
-		
-		# TODO if it is married connect to given id
-		# buttonUp geht nicht, da ein Mann mehrmals heiraten kann
-		# und damit sich mit mehreren Frauen verbinden müsste
-		
-		processChildren(child,  parentId,  rootChildrenList)
-	else:
-		id = printNode(child)
-		processChildren(child,  id)
+childrenXml = root.findall('child')
+for childXml in childrenXml:
+	childNode = Node(childXml)
+	processChildren(childXml,  childNode)
 	
-	# apend all other root children expecting the first one with a
-	# buttom up connection in the root tree
-	doButtomUp = True
+	# TODO set if no sqouse tag
+	# TODO warn if already set and no second sqouse tag
+	if rootChildNode is None:
+		rootChildNode = childNode
 
+
+print('\\begin{tikzpicture}[align=center,node distance=0.2,auto,nodes={inner sep=0.3em, minimum height=3em, rectangle,draw=black, text centered,text width=4cm}]')
+printChild(rootChildNode)
+printNodes(rootChildNode)
 print('\\end{tikzpicture}')
