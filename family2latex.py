@@ -170,12 +170,12 @@ def processChildren(parentXml,  parentNode):
 			# connect spouses bidirectional to the right
 			spouseNode.spouseRight = parentNode
 			parentNode.spouseLeft = spouseNode
-			columnOffset += 1
+			columnOffset += 1.5
 		elif not spouseNode.spouseLeft:
 			# connect spouses bidirectional to the left
 			spouseNode.spouseLeft = parentNode
 			parentNode.spouseRight = spouseNode
-			columnOffset -= 1
+			columnOffset -= 1.5
 		else:
 			print("ERR: Not more than 2 spouses are supported!")
 			exit(-1)
@@ -241,9 +241,9 @@ def updateColumnOfChildren(currentNode,  columnOffset):
 def checkOverlapps():
 	for node1 in allChildNodes:
 		for node2 in allChildNodes:
-			if (node1 is not node2 and node1.row == node2.row and node1.column == node2.column):
-				fixOverlap(node1,  node2)
-				return True
+			if (node1 is not node2 and node1.row == node2.row and 
+				node1.column > (node2.column - 1) and node1.column < (node2.column + 1)):
+				return fixOverlap(node1,  node2)
 	
 	# nothing has been updated
 	return False
@@ -252,13 +252,29 @@ def checkOverlapps():
 
 def fixOverlap(node1,  node2):
 	node = getMoreRightNode(node1,  node2)
-	columnOffset = 1
+	if node is None:
+		return False
+	
+	# only 0.5 column shift is needed
+	# do only 0.5 shift
+	columnOffset = 1 - abs(node1.column - node2.column)
 	
 	#only updates upward till a mother with more than one child
 	# -> horizontal connection
 	updateColumnTillMultiMother(node.mother,  columnOffset)
 	# update all children of this node
 	updateColumnOfChildren(node,  columnOffset)
+	
+	# update all sisters/brothers right of this node, too
+	if node.mother is not None:
+		updatingStarted = False
+		for childNode in node.mother.children:
+			if childNode is node:
+				updatingStarted = True
+			elif updatingStarted is True:
+				updateColumnOfChildren(childNode,  columnOffset)
+	
+	return True
 
 
 
@@ -272,9 +288,8 @@ def getMoreRightNode(node1,  node2):
 		return node
 		
 	print("WRN: No better solution found for fixing overlapping of " + node1.id + " and " + node2.id +
-		". Try default one.", file=sys.stderr)
-	exit(-1)
-	return node1
+		". Fixing was stopped.", file=sys.stderr)
+	return None
 
 
 
@@ -289,15 +304,21 @@ def getMoreRightNodeOneWay(node1,  node2):
 	
 	if not node1.mother:
 		return node1
-	if node1.mother.column > node1.column:
-		# mother lies more right than child
-		# so this child can be shifted to the right
-		return node1
 	if not node2.mother:
 		return node2
+	
+	# mother lies more right than child
+	# so this child can be shifted to the right
+	if node1.mother.column > node1.column:
+		return node1
+	if node2.mother.column > node2.column:
+		return node2
+	
 	if node1.mother.column > node2.mother.column:
 		return node1
-		
+	if node2.mother.column > node1.mother.column:
+		return node2
+	
 	return None
 
 
