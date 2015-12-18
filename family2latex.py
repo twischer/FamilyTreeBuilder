@@ -4,12 +4,15 @@
 # This child descripes how the other childs will connected to the first root child tree.
 # Be carful, the xml structure must contain only one spouse tag 
 # for all childs of the same root child
+import sys
 import xml.etree.ElementTree as ET
 
 # in cm
 NODE_WIDTH = 4.2
 NODE_HSPACE = 0.2
 NODE_VSPACE = 0.5
+
+MAX_FIX_OVERLAP_ITERATIONS = 10
 
 # this is used for searching the node with the correct ID
 # speed up instead of iterating through the family tree data structure
@@ -30,9 +33,11 @@ class Node :
 		self.spouseRight = None
 		self.spouseLeft = None
 		self.children = []
+		self.row = 0
 		self.column = 0
 		
 		if mother is not None:
+			self.row = mother.row + 1
 			self.column = mother.column + offset
 		
 		allChildNodes.append(self)
@@ -175,7 +180,7 @@ def processChildren(parentXml,  parentNode):
 			print("ERR: Not more than 2 spouses are supported!")
 			exit(-1)
 		
-		updateColumnTillSpouse(spouseNode,  parentNode,  columnOffset)
+		updateColumnTillSpouse(spouseNode,  parentNode,  columnOffset,  spouseNode.row)
 	
 	# process children of this mother
 	childrenXml = parentXml.findall('child')
@@ -190,19 +195,111 @@ def processChildren(parentXml,  parentNode):
 		childNr += 1
 
 
-def updateColumnTillSpouse(lastNode,  currentNode,  columnOffset):
+
+def updateColumnTillSpouse(lastNode,  currentNode,  columnOffset,  row):
 	if not currentNode:
 		return
 	
+	currentNode.row = row
 	currentNode.column += columnOffset
 	
 	for childNode in currentNode.children:
 		# do not run the same way back
 		if childNode is not lastNode:
-			updateColumnTillSpouse(currentNode,  childNode,  columnOffset)
+			updateColumnTillSpouse(currentNode,  childNode,  columnOffset,  row+1)
 	
 	if (currentNode.mother is not None) and (currentNode.mother is not lastNode):
-		updateColumnTillSpouse(currentNode,  currentNode.mother,  columnOffset)
+		updateColumnTillSpouse(currentNode,  currentNode.mother,  columnOffset,  row-1)
+
+
+
+def updateColumnTillMultiMother(currentNode,  columnOffset):
+	if not currentNode:
+		return
+	
+	# stop if mother has more than one child
+	# so there exists a horizontal line 
+	# which can be extended
+	if len(currentNode.children) > 1:
+		return
+	
+	currentNode.column += columnOffset
+	
+	if currentNode.mother is not None:
+		updateColumnTillMultiMother(currentNode.mother,  columnOffset)
+
+
+
+def updateColumnOfChildren(currentNode,  columnOffset):
+	currentNode.column += columnOffset
+	
+	for childNode in currentNode.children:
+		updateColumnOfChildren(childNode,  columnOffset)
+
+
+
+def checkOverlapps():
+	for node1 in allChildNodes:
+		for node2 in allChildNodes:
+			if (node1 is not node2 and node1.row == node2.row and node1.column == node2.column):
+				fixOverlap(node1,  node2)
+				return True
+	
+	# nothing has been updated
+	return False
+
+
+
+def fixOverlap(node1,  node2):
+	node = getMoreRightNode(node1,  node2)
+	columnOffset = 1
+	
+	#only updates upward till a mother with more than one child
+	# -> horizontal connection
+	updateColumnTillMultiMother(node.mother,  columnOffset)
+	# update all children of this node
+	updateColumnOfChildren(node,  columnOffset)
+
+
+
+def getMoreRightNode(node1,  node2):
+	node = getMoreRightNodeOneWay(node1,  node2)
+	if node is not None:
+		return node
+	
+	node = getMoreRightNodeOneWay(node2,  node1)
+	if node is not None:
+		return node
+		
+	print("WRN: No better solution found for fixing overlapping of " + node1.id + " and " + node2.id +
+		". Try default one.", file=sys.stderr)
+	exit(-1)
+	return node1
+
+
+
+def getMoreRightNodeOneWay(node1,  node2):
+	# there is a direct connection to the left neighbour
+	# so it would result in a crossing line,
+	# if node1 would be moved
+	if node1.spouseLeft is not None:
+		return node2
+	if node2.spouseLeft is not None:
+		return node1
+	
+	if not node1.mother:
+		return node1
+	if node1.mother.column > node1.column:
+		# mother lies more right than child
+		# so this child can be shifted to the right
+		return node1
+	if not node2.mother:
+		return node2
+	if node1.mother.column > node2.mother.column:
+		return node1
+		
+	return None
+
 
 
 def printNodes(parentNode,  lastNode):
@@ -240,22 +337,23 @@ def printNodesSpouses(spouseNode,  parentNode,  lastNode):
 	printNodes(spouseNode,  parentNode)
 
 
-rootChildNode = None
-
+# convert the XML structure to the tree data structure (first stage)
 tree = ET.parse('family.xml')
 root = tree.getroot()
 childrenXml = root.findall('child')
 for childXml in childrenXml:
 	childNode = Node(childXml,  None,  0)
 	processChildren(childXml,  childNode)
-	
-	# TODO set if no sqouse tag
-	# TODO warn if already set and no second sqouse tag
-	if not rootChildNode:
-		rootChildNode = childNode
 
 
+# move overlapping nodes (second stage)
+for i in range(MAX_FIX_OVERLAP_ITERATIONS):
+	if checkOverlapps() is False:
+		break
+
+
+# print the tree out (third stage)
 print('\\begin{tikzpicture}[align=center,node distance=0.2cm,auto,nodes={inner sep=0.3em, minimum height=3em, rectangle,draw=black, text centered,text width=4cm}]')
-printChild(rootChildNode)
-printNodes(rootChildNode,  None)
+printChild(allChildNodes[0])
+printNodes(allChildNodes[0],  None)
 print('\\end{tikzpicture}')
