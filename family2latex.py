@@ -7,6 +7,9 @@
 import sys
 import xml.etree.ElementTree as ET
 
+# in columns
+NODE_SPOUSE_COL_SPACE = 0.5
+
 # in cm
 NODE_WIDTH = 4.2
 NODE_HSPACE = 0.2
@@ -83,16 +86,16 @@ def printChild(childNode,  parentNode=None,  rowOffset=1):
 def  printNode(childNode,  parentNode=None,  aboveOffset=None,  belowOffset=None,  leftOffset=None,  rightOffset=None):
 	# print tkiz node similar to
 	# \node[below left=0.5 and 0.2 of mother1] (child1) {Kind 1};
-	print('\t\\node',  end="") 
+	print('\t\\node[child',  end="") 
 	
 	# only use relative postioning,
 	# if a mother exists
 	if parentNode is not None:
-		print('[',  end="")
+		print(',',  end="")
 		# define which directions the rel pos should have
 		relPosOffsets = []
 		if aboveOffset:
-			print('above',  end="")
+			print(' above',  end="")
 			relPosOffsets.append( str(aboveOffset) )
 		if belowOffset:
 			print(' below',  end="")
@@ -105,9 +108,9 @@ def  printNode(childNode,  parentNode=None,  aboveOffset=None,  belowOffset=None
 			relPosOffsets.append( str(rightOffset) )
 		
 		relPosOffString = ' and '.join(relPosOffsets)
-		print('=' + relPosOffString + ' of ' + parentNode.id + '] ',  end="")
+		print('=' + relPosOffString + ' of ' + parentNode.id,  end="")
 	
-	print('(' + childNode.id + ') {' + childNode.text + '};')
+	print('] (' + childNode.id + ') {' + childNode.text + '};')
 	
 	
 def connectParentChild(motherId,  childId):
@@ -120,7 +123,8 @@ def connectParentChild(motherId,  childId):
 def connectSpouses(id1,  id2):
 	# print tikiz line for connecting married persons
 	# \draw[thick] (mother1) -- (father1);
-	print('\t\\draw[thick] (' + id1 + ') -- (' + id2 + ');')
+	print('\t\\draw[thick] (' + id1 + ') -- node[above]{??.??.??} node[below]{Place} ++(' + id2 + ');')
+#	print('\t\\draw[thick,decoration={text along path,text={path text},text align={center}},decorate] (' + id1 + ') -- (' + id2 + ');')
 
 
 def getChildDescription(xmlNode):
@@ -170,12 +174,12 @@ def processChildren(parentXml,  parentNode):
 			# connect spouses bidirectional to the right
 			spouseNode.spouseRight = parentNode
 			parentNode.spouseLeft = spouseNode
-			columnOffset += 1.5
+			columnOffset += 1 + NODE_SPOUSE_COL_SPACE
 		elif not spouseNode.spouseLeft:
 			# connect spouses bidirectional to the left
 			spouseNode.spouseLeft = parentNode
 			parentNode.spouseRight = spouseNode
-			columnOffset -= 1.5
+			columnOffset -= 1 + NODE_SPOUSE_COL_SPACE
 		else:
 			raise Exception("ERR: Not more than 2 spouses are supported!")
 		
@@ -249,12 +253,24 @@ def updateColumnOfChildren(currentNode,  columnOffset):
 
 
 
+def areChildrenMarried(node1,  node2):
+	return node1.spouseLeft is node2 or node1.spouseRight is node2;
+
+
 def checkOverlapps():
 	for node1 in allChildNodes:
 		for node2 in allChildNodes:
-			if (node1 is not node2 and node1.row == node2.row and 
-				node1.column > (node2.column - 1) and node1.column < (node2.column + 1)):
-				return fixOverlap(node1,  node2)
+			if (node1 is not node2 and node1.row == node2.row):
+				columnOffset = abs(node1.column - node2.column)
+				if columnOffset < (1 + NODE_SPOUSE_COL_SPACE) and areChildrenMarried(node1,  node2):
+					# between two spouses a spacing of NODE_SPOUSE_COL_SPACE columns is needed
+					# for the text
+					return fixOverlap(node1,  node2)
+				elif columnOffset < 1:
+					# if less than one column is between the nodes
+					# there is always an overlapping,
+					# because one node is exactly one column width
+					return fixOverlap(node1,  node2)
 	
 	# nothing has been updated
 	return False
@@ -272,6 +288,10 @@ def fixOverlap(node1,  node2):
 	# only 0.5 column shift is needed
 	# do only 0.5 shift
 	columnOffset = leftNode.column - rightNode.column + 1
+	
+	# add extra spacing if these children are connected because of marry
+	if areChildrenMarried(leftNode,  rightNode):
+		columnOffset += NODE_SPOUSE_COL_SPACE
 	
 	# update all children of this node
 	updateColumnOfChildren(rightNode,  columnOffset)
@@ -302,9 +322,17 @@ def sortNodesLeftToRight(node1,  node2):
 	# so it would result in a crossing line,
 	# if node1 would be moved
 	if node1.spouseLeft is not None:
-		return [node1,  node2]
+		# check if both nodes are married
+		# so the left node has to leave left
+		if node2 is node1.spouseLeft:
+			return [node2,  node1]
+		else:
+			return [node1,  node2]
 	if node2.spouseLeft is not None:
-		return [node2,  node1]
+		if node1 is node2.spouseLeft:
+			return [node1,  node2]
+		else:
+			return [node2,  node1]
 	
 	if node1.spouseRight is not None:
 		return [node2,  node1]
@@ -392,7 +420,9 @@ except Exception as e:
 
 
 # print the tree out (third stage)
-print('\\begin{tikzpicture}[align=center,node distance=0.2cm,auto,nodes={inner sep=0.3em, minimum height=3em, rectangle,draw=black, text centered,text width=4cm}]')
+print('\\begin{tikzpicture}[align=center,auto]')
+# TODO shapes elipse
+print("\t\\tikzstyle{child} = [distance=0.2cm, inner sep=0.3em, minimum height=3em, rectangle, draw=black, text centered, text width=4cm]")
 printChild(allChildNodes[0])
 printNodes(allChildNodes[0],  None)
 print('\\end{tikzpicture}')
