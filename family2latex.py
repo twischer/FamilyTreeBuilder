@@ -155,13 +155,11 @@ def processChildren(parentXml,  parentNode):
 	for spouseTagXml in spouseTagsXml:
 		spouseId = spouseTagXml.get('id',  None)
 		if not spouseId:
-			print("ERR: Spouse tag does not contain an id attribute!")
-			exit(-1)
-			
+			raise Exception("ERR: Spouse tag does not contain an id attribute!")
+		
 		spouseNode = findChildNode(spouseId)
 		if not spouseNode:
-			print("ERR: child with spouse ID not already defined!")
-			exit(-1)
+			raise Exception("ERR: child with spouse ID not already defined!")
 		
 		# caluclate offset for setting both nodes on same position
 		columnOffset = spouseNode.column - parentNode.column
@@ -177,8 +175,7 @@ def processChildren(parentXml,  parentNode):
 			parentNode.spouseRight = spouseNode
 			columnOffset -= 1.5
 		else:
-			print("ERR: Not more than 2 spouses are supported!")
-			exit(-1)
+			raise Exception("ERR: Not more than 2 spouses are supported!")
 		
 		updateColumnTillSpouse(spouseNode,  parentNode,  columnOffset,  spouseNode.row)
 	
@@ -221,6 +218,19 @@ def updateColumnTillMultiMother(currentNode,  columnOffset):
 	# so there exists a horizontal line 
 	# which can be extended
 	if len(currentNode.children) > 1:
+		# calulate new column depending on left and right child
+		newMotherColumn = (currentNode.children[-1].column + currentNode.children[0].column) / 2
+		
+		motherColumnOffset = newMotherColumn - currentNode.column
+		# only proceed, if the mother position has changed
+		if motherColumnOffset != 0:
+			currentNode.column += motherColumnOffset
+			# update all mothers and children of the grand mother
+#			if currentNode.mother is not None:
+				# stop updating on this mother
+				# So update all upward children
+#				updateColumnTillSpouse(currentNode,  currentNode.mother,  motherColumnOffset,  currentNode.mother.row)
+#				raise Exception("test")
 		return
 	
 	currentNode.column += columnOffset
@@ -251,25 +261,26 @@ def checkOverlapps():
 
 
 def fixOverlap(node1,  node2):
-	node = getMoreRightNode(node1,  node2)
-	if node is None:
+	[leftNode,  rightNode] = sortNodesLeftToRight(node1,  node2)
+	if leftNode is None:
 		return False
 	
 	# only 0.5 column shift is needed
 	# do only 0.5 shift
-	columnOffset = 1 - abs(node1.column - node2.column)
+	columnOffset = leftNode.column - rightNode.column + 1
+	
+	# update all children of this node
+	updateColumnOfChildren(rightNode,  columnOffset)
 	
 	#only updates upward till a mother with more than one child
 	# -> horizontal connection
-	updateColumnTillMultiMother(node.mother,  columnOffset)
-	# update all children of this node
-	updateColumnOfChildren(node,  columnOffset)
+	updateColumnTillMultiMother(rightNode.mother,  columnOffset)
 	
 	# update all sisters/brothers right of this node, too
-	if node.mother is not None:
+	if rightNode.mother is not None:
 		updatingStarted = False
-		for childNode in node.mother.children:
-			if childNode is node:
+		for childNode in rightNode.mother.children:
+			if childNode is rightNode:
 				updatingStarted = True
 			elif updatingStarted is True:
 				updateColumnOfChildren(childNode,  columnOffset)
@@ -278,48 +289,34 @@ def fixOverlap(node1,  node2):
 
 
 
-def getMoreRightNode(node1,  node2):
-	node = getMoreRightNodeOneWay(node1,  node2)
-	if node is not None:
-		return node
-	
-	node = getMoreRightNodeOneWay(node2,  node1)
-	if node is not None:
-		return node
-		
-	print("WRN: No better solution found for fixing overlapping of " + node1.id + " and " + node2.id +
-		". Fixing was stopped.", file=sys.stderr)
-	return None
-
-
-
-def getMoreRightNodeOneWay(node1,  node2):
+def sortNodesLeftToRight(node1,  node2):
 	# there is a direct connection to the left neighbour
 	# so it would result in a crossing line,
 	# if node1 would be moved
 	if node1.spouseLeft is not None:
-		return node2
+		return [node1,  node2]
 	if node2.spouseLeft is not None:
-		return node1
+		return [node2,  node1]
 	
 	if not node1.mother:
-		return node1
+		return [node2,  node1]
 	if not node2.mother:
-		return node2
+		return [node1,  node2]
 	
 	# mother lies more right than child
 	# so this child can be shifted to the right
 	if node1.mother.column > node1.column:
-		return node1
+		return [node2,  node1]
 	if node2.mother.column > node2.column:
-		return node2
+		return [node1,  node2]
 	
 	if node1.mother.column > node2.mother.column:
-		return node1
+		return [node2,  node1]
 	if node2.mother.column > node1.mother.column:
-		return node2
+		return [node1,  node2]
 	
-	return None
+	raise Exception("WRN: No better solution found for fixing overlapping of " + node1.id + " and " + node2.id +
+		". Fixing will be stopped.")
 
 
 
@@ -368,9 +365,12 @@ for childXml in childrenXml:
 
 
 # move overlapping nodes (second stage)
-for i in range(MAX_FIX_OVERLAP_ITERATIONS):
-	if checkOverlapps() is False:
-		break
+try:
+	for i in range(MAX_FIX_OVERLAP_ITERATIONS):
+		if checkOverlapps() is False:
+			break
+except Exception as e:
+	print(e, file=sys.stderr)
 
 
 # print the tree out (third stage)
