@@ -281,6 +281,9 @@ fixCounter = 0
 def fixOverlap(node1,  node2):
 	global fixCounter
 	
+	print("Fixing overlapping of "+ node1.id + " " + str(node1.column) + " and " + 
+		node2.id + " " + str(node2.column), file=sys.stderr)
+	
 	[leftNode,  rightNode] = sortNodesLeftToRight(node1,  node2)
 	if leftNode is None or rightNode is None:
 		return False
@@ -293,13 +296,6 @@ def fixOverlap(node1,  node2):
 	if areChildrenMarried(leftNode,  rightNode):
 		columnOffset += NODE_SPOUSE_COL_SPACE
 	
-	# update all children of this node
-	updateColumnOfChildren(rightNode,  columnOffset)
-	
-	#only updates upward till a mother with more than one child
-	# -> horizontal connection
-	updateColumnTillMultiMother(rightNode.mother,  columnOffset)
-	
 	# update all sisters/brothers right of this node, too
 	if rightNode.mother is not None:
 		updatingStarted = False
@@ -308,6 +304,13 @@ def fixOverlap(node1,  node2):
 				updatingStarted = True
 			elif updatingStarted is True:
 				updateColumnOfChildren(childNode,  columnOffset)
+	
+	# update all children of this node
+	updateColumnOfChildren(rightNode,  columnOffset)
+	
+	#only updates upward till a mother with more than one child
+	# -> horizontal connection
+	updateColumnTillMultiMother(rightNode.mother,  columnOffset)
 	
 	fixCounter += 1
 	if DEBUG_MAX_FIXES >= 0 and fixCounter >= DEBUG_MAX_FIXES:
@@ -398,6 +401,8 @@ def printNodesSpouses(spouseNode,  parentNode,  lastNode):
 
 
 # convert the XML structure to the tree data structure (first stage)
+print("INF: Reading file " + sys.argv[1], file=sys.stderr)
+#tree = ET.parse("./data/family.xml")
 tree = ET.parse(sys.argv[1])
 root = tree.getroot()
 childrenXml = root.findall('child')
