@@ -370,7 +370,7 @@ def printNodesSpouses(spouseNode,  parentNode,  lastNode):
 
 
 # convert the XML structure to the tree data structure (first stage)
-tree = ET.parse('family.xml')
+tree = ET.parse(sys.argv[1])
 root = tree.getroot()
 childrenXml = root.findall('child')
 for childXml in childrenXml:

@@ -60,3 +60,4 @@ target/
 *.aux
 /family.tex
 /.eric6project/*
+/data/
