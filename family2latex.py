@@ -15,7 +15,7 @@ NODE_WIDTH = 4.2
 NODE_HSPACE = 0.2
 NODE_VSPACE = 0.5
 
-MAX_FIX_OVERLAP_ITERATIONS = 10
+MAX_FIX_OVERLAP_ITERATIONS = 100
 
 DEBUG_MAX_FIXES = -1
 
@@ -216,6 +216,27 @@ def updateColumnTillSpouse(lastNode,  currentNode,  columnOffset,  row):
 
 
 
+def findMothersWithSameGrandMother(child1,  child2):
+	# cancle if there exists no same grand mother
+	if child1 is None:
+		return None
+	if child2 is None:
+		return None
+	
+	if child1.mother is None:
+		return None
+	if child2.mother is None:
+		return None
+	
+	# return the mothers,
+	# if the same grand mother was found
+	if child1.mother is child2.mother:
+		return [child1,  child2]
+	
+	return findMothersWithSameGrandMother(child1.mother,  child2.mother)
+
+
+
 def updateColumnTillMultiMother(currentNode,  columnOffset):
 	if not currentNode:
 		return
@@ -252,6 +273,26 @@ def updateColumnOfChildren(currentNode,  columnOffset):
 		updateColumnOfChildren(childNode,  columnOffset)
 
 
+def updateColumnOfSisBroChildren(mother,  startingChild,  columnOffset):
+	# update all sisters/brothers right of this node, too
+	updatingStarted = False
+	for childNode in mother.children:
+		if childNode is startingChild:
+			updatingStarted = True
+		elif updatingStarted is True:
+			updateColumnOfChildren(childNode,  columnOffset)
+	
+	# update all children of this node
+	updateColumnOfChildren(startingChild,  columnOffset)
+		
+	# TODO center grandgrand mother between children
+	# and update all above nodes
+	# TODO update above right children, too
+	#only updates upward till a mother with more than one child
+	# -> horizontal connection
+#	updateColumnTillMultiMother(rightNode.mother,  columnOffset)
+
+
 
 def areChildrenMarried(node1,  node2):
 	return node1.spouseLeft is node2 or node1.spouseRight is node2;
@@ -281,12 +322,16 @@ fixCounter = 0
 def fixOverlap(node1,  node2):
 	global fixCounter
 	
-	print("Fixing overlapping of "+ node1.id + " " + str(node1.column) + " and " + 
-		node2.id + " " + str(node2.column), file=sys.stderr)
+	if DEBUG_MAX_FIXES >= 0 and fixCounter >= DEBUG_MAX_FIXES:
+		raise Exception("Max fix count reached!")
+	fixCounter += 1
 	
 	[leftNode,  rightNode] = sortNodesLeftToRight(node1,  node2)
 	if leftNode is None or rightNode is None:
 		return False
+	
+	print("Fixing overlapping of "+ leftNode.id + " " + str(leftNode.column) + " and " + 
+		rightNode.id + " " + str(rightNode.column), file=sys.stderr)
 	
 	# only 0.5 column shift is needed
 	# do only 0.5 shift
@@ -296,25 +341,29 @@ def fixOverlap(node1,  node2):
 	if areChildrenMarried(leftNode,  rightNode):
 		columnOffset += NODE_SPOUSE_COL_SPACE
 	
-	# update all sisters/brothers right of this node, too
-	if rightNode.mother is not None:
-		updatingStarted = False
-		for childNode in rightNode.mother.children:
-			if childNode is rightNode:
-				updatingStarted = True
-			elif updatingStarted is True:
-				updateColumnOfChildren(childNode,  columnOffset)
 	
-	# update all children of this node
-	updateColumnOfChildren(rightNode,  columnOffset)
+	# find the correct slit point.
+	# Over the slitting child a horizontal line has to be exist.
+	# If both children have a same grand mother,
+	# the horizontal line can be found under this grand mother
+	mothers = findMothersWithSameGrandMother(leftNode,  rightNode)
+	if mothers is not None:
+		rightGrandMother = mothers[1]
+		sameGrandGrandMother = rightGrandMother.mother
+		updateColumnOfSisBroChildren(sameGrandGrandMother,  rightGrandMother,  columnOffset)
 	
-	#only updates upward till a mother with more than one child
-	# -> horizontal connection
-	updateColumnTillMultiMother(rightNode.mother,  columnOffset)
-	
-	fixCounter += 1
-	if DEBUG_MAX_FIXES >= 0 and fixCounter >= DEBUG_MAX_FIXES:
-		raise Exception("Max fix count reached!")
+	else:
+		# check if the same mother exists for the spouse and the right child
+		mothers = findMothersWithSameGrandMother(leftNode.spouseLeft,  rightNode)
+		if mothers is not None:
+			rightGrandMother = mothers[1]
+			sameGrandGrandMother = rightGrandMother.mother
+			updateColumnOfSisBroChildren(sameGrandGrandMother,  rightGrandMother,  columnOffset)
+		else:
+			# If the children has not any same grand mother
+			# the split point would be a spouses connection
+			# so we can update the hole tree without following spouse connections
+			updateColumnTillSpouse(None,  rightNode,  columnOffset,  rightNode.row)
 	
 	return True
 
@@ -337,10 +386,14 @@ def sortNodesLeftToRight(node1,  node2):
 		else:
 			return [node2,  node1]
 	
+	# if the other node is the right spouse
+	# this node has to be the left node
 	if node1.spouseRight is not None:
-		return [node2,  node1]
+		if node1.spouseRight is node2:
+			return [node1,  node2]
 	if node2.spouseRight is not None:
-		return [node1,  node2]
+		if node1.spouseRight is node1:
+			return [node2,  node1]
 	
 	if not node1.mother:
 		return [node2,  node1]
@@ -402,8 +455,8 @@ def printNodesSpouses(spouseNode,  parentNode,  lastNode):
 
 # convert the XML structure to the tree data structure (first stage)
 print("INF: Reading file " + sys.argv[1], file=sys.stderr)
-#tree = ET.parse("./data/family.xml")
-tree = ET.parse(sys.argv[1])
+tree = ET.parse("./data/family.xml")
+#tree = ET.parse(sys.argv[1])
 root = tree.getroot()
 childrenXml = root.findall('child')
 for childXml in childrenXml:
@@ -425,7 +478,7 @@ except Exception as e:
 
 
 # print the tree out (third stage)
-print('\\begin{tikzpicture}[align=center,auto]')
+print('\\begin{tikzpicture}')
 # TODO shapes elipse
 print("\t\\tikzstyle{child} = [distance=0.2cm, inner sep=0.3em, minimum height=3em, rectangle, draw=black, text centered, text width=4cm]")
 printChild(allChildNodes[0])
