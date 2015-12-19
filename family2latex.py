@@ -14,6 +14,8 @@ NODE_VSPACE = 0.5
 
 MAX_FIX_OVERLAP_ITERATIONS = 10
 
+DEBUG_MAX_FIXES = -1
+
 # this is used for searching the node with the correct ID
 # speed up instead of iterating through the family tree data structure
 allChildNodes = []
@@ -226,11 +228,10 @@ def updateColumnTillMultiMother(currentNode,  columnOffset):
 		if motherColumnOffset != 0:
 			currentNode.column += motherColumnOffset
 			# update all mothers and children of the grand mother
-#			if currentNode.mother is not None:
+			if currentNode.mother is not None:
 				# stop updating on this mother
 				# So update all upward children
-#				updateColumnTillSpouse(currentNode,  currentNode.mother,  motherColumnOffset,  currentNode.mother.row)
-#				raise Exception("test")
+				updateColumnTillSpouse(currentNode,  currentNode.mother,  motherColumnOffset,  currentNode.mother.row)
 		return
 	
 	currentNode.column += columnOffset
@@ -260,9 +261,12 @@ def checkOverlapps():
 
 
 
+fixCounter = 0
 def fixOverlap(node1,  node2):
+	global fixCounter
+	
 	[leftNode,  rightNode] = sortNodesLeftToRight(node1,  node2)
-	if leftNode is None:
+	if leftNode is None or rightNode is None:
 		return False
 	
 	# only 0.5 column shift is needed
@@ -285,6 +289,10 @@ def fixOverlap(node1,  node2):
 			elif updatingStarted is True:
 				updateColumnOfChildren(childNode,  columnOffset)
 	
+	fixCounter += 1
+	if DEBUG_MAX_FIXES >= 0 and fixCounter >= DEBUG_MAX_FIXES:
+		raise Exception("Max fix count reached!")
+	
 	return True
 
 
@@ -297,6 +305,11 @@ def sortNodesLeftToRight(node1,  node2):
 		return [node1,  node2]
 	if node2.spouseLeft is not None:
 		return [node2,  node1]
+	
+	if node1.spouseRight is not None:
+		return [node2,  node1]
+	if node2.spouseRight is not None:
+		return [node1,  node2]
 	
 	if not node1.mother:
 		return [node2,  node1]
@@ -355,6 +368,7 @@ def printNodesSpouses(spouseNode,  parentNode,  lastNode):
 	printNodes(spouseNode,  parentNode)
 
 
+
 # convert the XML structure to the tree data structure (first stage)
 tree = ET.parse('family.xml')
 root = tree.getroot()
@@ -365,11 +379,15 @@ for childXml in childrenXml:
 
 
 # move overlapping nodes (second stage)
+exitCode = 0
 try:
 	for i in range(MAX_FIX_OVERLAP_ITERATIONS):
 		if checkOverlapps() is False:
+			# all overlapps are fixed
+			exitCode = 1
 			break
 except Exception as e:
+	# an overlapp could not be fixed
 	print(e, file=sys.stderr)
 
 
@@ -378,3 +396,5 @@ print('\\begin{tikzpicture}[align=center,node distance=0.2cm,auto,nodes={inner s
 printChild(allChildNodes[0])
 printNodes(allChildNodes[0],  None)
 print('\\end{tikzpicture}')
+
+exit(exitCode)
