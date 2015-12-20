@@ -372,21 +372,13 @@ def fixOverlap(node1,  node2):
 
 
 def sortNodesLeftToRight(node1,  node2):
-	# there is a direct connection to the left neighbour
-	# so it would result in a crossing line,
-	# if node1 would be moved
-	if node1.spouseLeft is not None:
-		# check if both nodes are married
-		# so the left node has to leave left
-		if node2 is node1.spouseLeft:
-			return [node2,  node1]
-		else:
-			return [node1,  node2]
-	if node2.spouseLeft is not None:
-		if node1 is node2.spouseLeft:
-			return [node1,  node2]
-		else:
-			return [node2,  node1]
+	sorted = sortByLeftSpouse(node1,  node2)
+	if sorted is not None:
+		return sorted
+	
+	sorted = sortByLeftSpouse(node2,  node1)
+	if sorted is not None:
+		return sorted
 	
 	# if the other node is the right spouse
 	# this node has to be the left node
@@ -416,6 +408,37 @@ def sortNodesLeftToRight(node1,  node2):
 	
 	raise Warning("WRN: No better solution found for fixing overlapping of " + node1.id + " and " + node2.id +
 		". Fixing will be stopped.")
+
+
+
+def sortByLeftSpouse(node1,  node2):
+	# there is a direct connection to the left neighbour
+	# so it would result in a crossing line,
+	# if node1 would be moved
+	if node1.spouseLeft is not None:
+		# check if both nodes are married
+		# so the left node has to leave left
+		if node2 is node1.spouseLeft:
+			return [node2,  node1]
+		else:
+			# check if the spouse is the spilling of the other node
+			childrenOffset = getChildrenOffset(node2,  node1.spouseLeft)
+			if childrenOffset is not None:
+				if childrenOffset > 0:
+					return [node2,  node1]
+			
+			return [node1,  node2]
+	
+
+# Sorts children of the same mother
+# from left ro right
+def getChildrenOffset(node1,  node2):
+	# cancle, if there is no same mother
+	if (node1.mother is not node2.mother):
+		return None
+	
+	children = node1.mother.children
+	return children.index(node2) - children.index(node1)
 
 
 
