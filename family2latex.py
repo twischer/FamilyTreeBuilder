@@ -47,19 +47,7 @@ class Node :
 		
 		allChildNodes.append(self)
 		pass
-	
 
-#	def getAllNeighbours(self):
-#		neighbours = []
-#		neighbours += self.children
-#		
-#		if self.spouseRight is not None:
-#			neighbours.append(self.spouseRight)
-#		if self.spouseLeft is not None:
-#			neighbours.append(self.spouseLeft)
-#		if self.mother is not None:
-#			neighbours.append(self.mother)
-#		return neighbours
 
 
 def printChild(childNode,  parentNode=None,  rowOffset=1):
@@ -216,24 +204,39 @@ def updateColumnTillSpouse(lastNode,  currentNode,  columnOffset,  row):
 
 
 
-def findMothersWithSameGrandMother(child1,  child2):
+def findRightMotherBelowSameGrandMother(leftChild,  rightChild):
 	# cancle if there exists no same grand mother
-	if child1 is None:
+	if leftChild is None:
 		return None
-	if child2 is None:
-		return None
-	
-	if child1.mother is None:
-		return None
-	if child2.mother is None:
+	if rightChild is None:
 		return None
 	
-	# return the mothers,
-	# if the same grand mother was found
-	if child1.mother is child2.mother:
-		return [child1,  child2]
+	if rightChild.mother is None:
+		return None
 	
-	return findMothersWithSameGrandMother(child1.mother,  child2.mother)
+	# if the lleft child has no mother
+	# a connection could possibly found over the left spouse of the left child
+	if leftChild.mother is not None:
+		# return the mothers,
+		# if the same grand mother was found
+		if leftChild.mother is rightChild.mother:
+			return rightChild
+		
+		rightMother = findRightMotherBelowSameGrandMother(leftChild.mother,  rightChild.mother)
+		if rightMother is not None:
+			return rightMother
+	
+	# only follow left spouse,
+	# because this connection could not be used as a splitting point,
+	# becasue the nodes had to be moved to the left for fixing overlapping
+	# But all movments have to be done to the right
+	if leftChild.spouseLeft is not None:
+		return findRightMotherBelowSameGrandMother(leftChild.spouseLeft,  rightChild)
+	
+	# all other spouse connections of the two children can be used as splitting points,
+	# because the nodes can be moved more right
+	# Movments till a spouse connection will be done by calling updateColumnTillSpouse()
+	return None
 
 
 
@@ -273,8 +276,8 @@ def updateColumnOfChildren(currentNode,  columnOffset):
 		updateColumnOfChildren(childNode,  columnOffset)
 
 
-def updateColumnOfSisBroChildren(mother,  startingChild,  columnOffset):
-	# update all sisters/brothers right of this node, too
+def updateColumnOfMoreRightSiblingsAndChildren(mother,  startingChild,  columnOffset):
+	# update all sisters and brothers right of this node, too
 	updatingStarted = False
 	for childNode in mother.children:
 		if childNode is startingChild:
@@ -346,24 +349,16 @@ def fixOverlap(node1,  node2):
 	# Over the slitting child a horizontal line has to be exist.
 	# If both children have a same grand mother,
 	# the horizontal line can be found under this grand mother
-	mothers = findMothersWithSameGrandMother(leftNode,  rightNode)
-	if mothers is not None:
-		rightGrandMother = mothers[1]
+	rightGrandMother = findRightMotherBelowSameGrandMother(leftNode,  rightNode)
+	if rightGrandMother is not None:
 		sameGrandGrandMother = rightGrandMother.mother
-		updateColumnOfSisBroChildren(sameGrandGrandMother,  rightGrandMother,  columnOffset)
+		updateColumnOfMoreRightSiblingsAndChildren(sameGrandGrandMother,  rightGrandMother,  columnOffset)
 	
 	else:
-		# check if the same mother exists for the spouse and the right child
-		mothers = findMothersWithSameGrandMother(leftNode.spouseLeft,  rightNode)
-		if mothers is not None:
-			rightGrandMother = mothers[1]
-			sameGrandGrandMother = rightGrandMother.mother
-			updateColumnOfSisBroChildren(sameGrandGrandMother,  rightGrandMother,  columnOffset)
-		else:
-			# If the children has not any same grand mother
-			# the split point would be a spouses connection
-			# so we can update the hole tree without following spouse connections
-			updateColumnTillSpouse(None,  rightNode,  columnOffset,  rightNode.row)
+		# If the children has not any same grand mother
+		# the split point would be a spouses connection
+		# so we can update the hole tree without following spouse connections
+		updateColumnTillSpouse(None,  rightNode,  columnOffset,  rightNode.row)
 	
 	return True
 
