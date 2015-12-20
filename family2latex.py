@@ -149,6 +149,13 @@ def connectSpouses(spouseInfo):
 def getChildDescription(xmlNode):
 	text = xmlNode.get('name')
 	
+	birthname = xmlNode.get("birthname")
+	if birthname is not None:
+		text += "\\\\ geb. " + birthname
+	# TODO lastname2 name between birth and death
+	# second first wedding
+	# death name is always the full name
+	
 	text += "\\\\ \\textborn " + xmlNode.get('birth',  "UNKOWN")
 	birthPlace = xmlNode.get('birthplace')
 	if birthPlace is not None:
@@ -538,7 +545,7 @@ except Warning as e:
 print('\\begin{tikzpicture}')
 # TODO shapes
 # recangle with round edges
-print("\t\\tikzstyle{child} = [inner sep=0pt, minimum height=2.3cm, rectangle, draw=black, text centered, text width=" + str(NODE_WIDTH) + "cm]")
+print("\t\\tikzstyle{child} = [inner sep=0pt, minimum height=2.6cm, rectangle, draw=black, text centered, text width=" + str(NODE_WIDTH) + "cm]")
 printChild(allChildNodes[0])
 printNodes(allChildNodes[0],  None)
 print('\\end{tikzpicture}')
