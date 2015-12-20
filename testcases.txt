@@ -1,0 +1,32 @@
+  1
++-+-+
+|   |
+2-3 4
+Deshalb kann spouse nicht erst ignoriert werden
+Da dann 4 an der gleichen mossition wie 3 wäre
+
+
+  1
++-+-+
+| | |
+2 3 4
+  |
+5-6
+Wenn nicht immer bei ältester Mutter (also 1) starten
+dann würde 2 nach 3 betrachtet, da dann ab 6 begonnen
+
+
+1-2 5
+|   |
+3---4
+ersten rechten ehepartner (2) eher abarbeiten
+
+
+ 1
++-+
+| |
+2 3--4
++   +++
+|   | |
+5-6 7 8
+Zweiten rechten ehepartner (6) eher abarbeiten
