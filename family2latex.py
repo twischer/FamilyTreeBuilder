@@ -19,6 +19,13 @@ MAX_FIX_OVERLAP_ITERATIONS = 100
 
 DEBUG_MAX_FIXES = -1
 
+
+class Warning(Exception):
+    pass
+
+class Error(Exception):
+    pass
+
 # this is used for searching the node with the correct ID
 # speed up instead of iterating through the family tree data structure
 allChildNodes = []
@@ -149,11 +156,11 @@ def processChildren(parentXml,  parentNode):
 	for spouseTagXml in spouseTagsXml:
 		spouseId = spouseTagXml.get('id',  None)
 		if not spouseId:
-			raise Exception("ERR: Spouse tag does not contain an id attribute!")
+			raise Error("ERR: Spouse tag does not contain an id attribute!")
 		
 		spouseNode = findChildNode(spouseId)
 		if not spouseNode:
-			raise Exception("ERR: child with spouse ID not already defined!")
+			raise Error("ERR: child with spouse ID not already defined!")
 		
 		# caluclate offset for setting both nodes on same position
 		columnOffset = spouseNode.column - parentNode.column
@@ -169,7 +176,7 @@ def processChildren(parentXml,  parentNode):
 			parentNode.spouseRight = spouseNode
 			columnOffset -= 1 + NODE_SPOUSE_COL_SPACE
 		else:
-			raise Exception("ERR: Not more than 2 spouses are supported!")
+			raise Error("ERR: Not more than 2 spouses are supported!")
 		
 		updateColumnTillSpouse(spouseNode,  parentNode,  columnOffset,  spouseNode.row)
 	
@@ -326,7 +333,7 @@ def fixOverlap(node1,  node2):
 	global fixCounter
 	
 	if DEBUG_MAX_FIXES >= 0 and fixCounter >= DEBUG_MAX_FIXES:
-		raise Exception("Max fix count reached!")
+		raise Warning("Max fix count reached!")
 	fixCounter += 1
 	
 	[leftNode,  rightNode] = sortNodesLeftToRight(node1,  node2)
@@ -407,7 +414,7 @@ def sortNodesLeftToRight(node1,  node2):
 	if node2.mother.column > node1.mother.column:
 		return [node1,  node2]
 	
-	raise Exception("WRN: No better solution found for fixing overlapping of " + node1.id + " and " + node2.id +
+	raise Warning("WRN: No better solution found for fixing overlapping of " + node1.id + " and " + node2.id +
 		". Fixing will be stopped.")
 
 
@@ -467,14 +474,15 @@ try:
 			# all overlapps are fixed
 			exitCode = 1
 			break
-except Exception as e:
+except Warning as e:
 	# an overlapp could not be fixed
 	print(e, file=sys.stderr)
 
 
 # print the tree out (third stage)
 print('\\begin{tikzpicture}')
-# TODO shapes elipse
+# TODO shapes
+# recangle with round edges
 print("\t\\tikzstyle{child} = [distance=0.2cm, inner sep=0.3em, minimum height=3em, rectangle, draw=black, text centered, text width=4cm]")
 printChild(allChildNodes[0])
 printNodes(allChildNodes[0],  None)
