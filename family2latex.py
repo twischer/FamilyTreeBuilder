@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 NODE_SPOUSE_COL_SPACE = 0.5
 
 # in cm
-NODE_WIDTH = 4.0
+NODE_WIDTH = 5.0
 NODE_HSPACE = 0.2
 NODE_VSPACE = 0.5
 
@@ -117,14 +117,26 @@ def connectParentChild(motherId,  childId):
 def connectSpouses(id1,  id2):
 	# print tikiz line for connecting married persons
 	# \draw[thick] (mother1) -- (father1);
-	print('\t\\draw[thick] (' + id1 + ') -- node[above]{??.??.??} node[below]{Place} ++(' + id2 + ');')
+	print('\t\\draw[thick] (' + id1 + ') -- node[above]{\\textmarried ??.??.??} node[below]{Place} ++(' + id2 + ');')
 #	print('\t\\draw[thick,decoration={text along path,text={path text},text align={center}},decorate] (' + id1 + ') -- (' + id2 + ');')
 
 
 def getChildDescription(xmlNode):
 	text = xmlNode.get('name')
-	text += "\\\\ $\\star$ " + xmlNode.get('birth',  'UNKOWN')
-	# TODO death und places
+	
+	text += "\\\\ \\textborn " + xmlNode.get('birth',  "UNKOWN")
+	birthPlace = xmlNode.get('birthplace')
+	if birthPlace is not None:
+		text += "\\\\ " + birthPlace
+	
+	death = xmlNode.get('death')
+	if death is not None:
+		text += "\\\\ \\textdied " + death
+		
+		deathplace = xmlNode.get('deathplace')
+		if deathplace is not None:
+			text += "\\\\ " + deathplace
+	
 	return text
 
 
@@ -503,7 +515,7 @@ except Warning as e:
 print('\\begin{tikzpicture}[inner sep=0pt]')
 # TODO shapes
 # recangle with round edges
-print("\t\\tikzstyle{child} = [minimum height=2cm, rectangle, draw=black, text centered, text width=" + str(NODE_WIDTH) + "cm]")
+print("\t\\tikzstyle{child} = [minimum height=2.3cm, rectangle, draw=black, text centered, text width=" + str(NODE_WIDTH) + "cm]")
 printChild(allChildNodes[0])
 printNodes(allChildNodes[0],  None)
 print('\\end{tikzpicture}')
