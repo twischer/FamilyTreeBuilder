@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 NODE_SPOUSE_COL_SPACE = 0.5
 
 # in cm
-NODE_WIDTH = 4.2
+NODE_WIDTH = 4.0
 NODE_HSPACE = 0.2
 NODE_VSPACE = 0.5
 
@@ -58,9 +58,8 @@ class Node :
 
 
 def printChild(childNode,  parentNode=None,  rowOffset=1):
-	leftOffset = 0.0
-	rightOffset = 0.0
-	
+	leftOffset = None
+	rightOffset = None
 	if parentNode is not None:
 		childOffset = childNode.column - parentNode.column
 		if childOffset < 0:
@@ -124,9 +123,7 @@ def connectSpouses(id1,  id2):
 
 def getChildDescription(xmlNode):
 	text = xmlNode.get('name')
-	# TODO newline 
-	text += " "
-	text += "* " + xmlNode.get('birth',  'UNKOWN')
+	text += "\\\\ $\\star$ " + xmlNode.get('birth',  'UNKOWN')
 	# TODO death und places
 	return text
 
@@ -135,7 +132,7 @@ def getUniqId(xmlNode):
 	# create id if no id could be found in xml structure
 	id = xmlNode.get('id')
 	if not id:
-		text = getChildDescription(xmlNode)
+		text = xmlNode.get('name') + xmlNode.get('birth',  'UNKOWN')
 		id = text.replace(" ",  "")
 		# TODO lower case the hole id
 		
@@ -503,10 +500,10 @@ except Warning as e:
 
 
 # print the tree out (third stage)
-print('\\begin{tikzpicture}')
+print('\\begin{tikzpicture}[inner sep=0pt]')
 # TODO shapes
 # recangle with round edges
-print("\t\\tikzstyle{child} = [distance=0.2cm, inner sep=0.3em, minimum height=3em, rectangle, draw=black, text centered, text width=4cm]")
+print("\t\\tikzstyle{child} = [minimum height=2cm, rectangle, draw=black, text centered, text width=" + str(NODE_WIDTH) + "cm]")
 printChild(allChildNodes[0])
 printNodes(allChildNodes[0],  None)
 print('\\end{tikzpicture}')
