@@ -54,6 +54,30 @@ class Node :
 		
 		allChildNodes.append(self)
 		pass
+		
+	def getRightSpouseChild(self):
+		if self.spouseRight is not None:
+			return self.spouseRight.rightSpouse
+		return None
+	
+	def getLeftSpouseChild(self):
+		if self.spouseLeft is not None:
+			return self.spouseLeft.leftSpouse
+		return None
+
+
+
+class SpouseNode:
+	def __init__(self,  xml,  leftSpouse,  rightSpouse) :
+		self.weddingDay = xml.get("wedding", "")
+		self.weddingPlace = xml.get("weddingplace", "")
+		self.leftSpouse = leftSpouse
+		self.rightSpouse = rightSpouse
+		
+		# connect both spouses
+		leftSpouse.spouseRight = self
+		rightSpouse.spouseLeft = self
+		pass
 
 
 
@@ -114,11 +138,12 @@ def connectParentChild(motherId,  childId):
 	print(childId + '.north) + (0,0.25) $) -- (' + childId + ');')
 	
 
-def connectSpouses(id1,  id2):
+def connectSpouses(spouseInfo):
 	# print tikiz line for connecting married persons
 	# \draw[thick] (mother1) -- (father1);
-	print('\t\\draw[thick] (' + id1 + ') -- node[above]{\\textmarried ??.??.??} node[below]{Place} ++(' + id2 + ');')
-#	print('\t\\draw[thick,decoration={text along path,text={path text},text align={center}},decorate] (' + id1 + ') -- (' + id2 + ');')
+	print('\t\\draw[thick] (' + spouseInfo.leftSpouse.id + ') -- node[above]{\\textmarried ' +
+		spouseInfo.weddingDay + '} node[below]{' +
+		spouseInfo.weddingPlace + '} ++(' + spouseInfo.rightSpouse.id + ');')
 
 
 def getChildDescription(xmlNode):
@@ -176,13 +201,11 @@ def processChildren(parentXml,  parentNode):
 	
 		if not spouseNode.spouseRight:
 			# connect spouses bidirectional to the right
-			spouseNode.spouseRight = parentNode
-			parentNode.spouseLeft = spouseNode
+			SpouseNode(spouseTagXml, spouseNode, parentNode)
 			columnOffset += 1 + NODE_SPOUSE_COL_SPACE
 		elif not spouseNode.spouseLeft:
 			# connect spouses bidirectional to the left
-			spouseNode.spouseLeft = parentNode
-			parentNode.spouseRight = spouseNode
+			SpouseNode(spouseTagXml, parentNode, spouseNode)
 			columnOffset -= 1 + NODE_SPOUSE_COL_SPACE
 		else:
 			raise Error("ERR: Not more than 2 spouses are supported!")
@@ -246,8 +269,8 @@ def findRightMotherBelowSameGrandMother(leftChild,  rightChild):
 	# because this connection could not be used as a splitting point,
 	# becasue the nodes had to be moved to the left for fixing overlapping
 	# But all movments have to be done to the right
-	if leftChild.spouseLeft is not None:
-		return findRightMotherBelowSameGrandMother(leftChild.spouseLeft,  rightChild)
+	if leftChild.getLeftSpouseChild() is not None:
+		return findRightMotherBelowSameGrandMother(leftChild.getLeftSpouseChild(),  rightChild)
 	
 	# all other spouse connections of the two children can be used as splitting points,
 	# because the nodes can be moved more right
@@ -314,7 +337,7 @@ def updateColumnOfMoreRightSiblingsAndChildren(mother,  startingChild,  columnOf
 
 
 def areChildrenMarried(node1,  node2):
-	return node1.spouseLeft is node2 or node1.spouseRight is node2;
+	return node1.getRightSpouseChild() is node2 or node1.getLeftSpouseChild() is node2
 
 
 def checkOverlapps():
@@ -391,11 +414,11 @@ def sortNodesLeftToRight(node1,  node2):
 	
 	# if the other node is the right spouse
 	# this node has to be the left node
-	if node1.spouseRight is not None:
-		if node1.spouseRight is node2:
+	if node1.getRightSpouseChild() is not None:
+		if node1.getRightSpouseChild() is node2:
 			return [node1,  node2]
-	if node2.spouseRight is not None:
-		if node1.spouseRight is node1:
+	if node2.getRightSpouseChild() is not None:
+		if node1.getRightSpouseChild() is node1:
 			return [node2,  node1]
 	
 	if not node1.mother:
@@ -424,14 +447,14 @@ def sortByLeftSpouse(node1,  node2):
 	# there is a direct connection to the left neighbour
 	# so it would result in a crossing line,
 	# if node1 would be moved
-	if node1.spouseLeft is not None:
+	if node1.getLeftSpouseChild() is not None:
 		# check if both nodes are married
 		# so the left node has to leave left
-		if node2 is node1.spouseLeft:
+		if node2 is node1.getLeftSpouseChild():
 			return [node2,  node1]
 		else:
 			# check if the spouse is the spilling of the other node
-			childrenOffset = getChildrenOffset(node2,  node1.spouseLeft)
+			childrenOffset = getChildrenOffset(node2,  node1.getLeftSpouseChild())
 			if childrenOffset is not None:
 				if childrenOffset > 0:
 					return [node2,  node1]
@@ -469,12 +492,12 @@ def printNodes(parentNode,  lastNode):
 		connectParentChild(parentNode.mother.id,  parentNode.id)
 		printNodes(parentNode.mother,  parentNode)
 	
-	printNodesSpouses(parentNode.spouseLeft,  parentNode,  lastNode)
-	printNodesSpouses(parentNode.spouseRight,  parentNode,  lastNode)
+	printNodesSpouses(parentNode.spouseLeft,  parentNode.getLeftSpouseChild(), parentNode,  lastNode)
+	printNodesSpouses(parentNode.spouseRight,  parentNode.getRightSpouseChild(), parentNode,  lastNode)
 
 
-def printNodesSpouses(spouseNode,  parentNode,  lastNode):
-	if (not spouseNode):
+def printNodesSpouses(spouseInfo,  spouseNode,  parentNode,  lastNode):
+	if spouseNode is None:
 		return
 	# do not run the same way back
 	if spouseNode is lastNode:
@@ -482,7 +505,7 @@ def printNodesSpouses(spouseNode,  parentNode,  lastNode):
 	# position in the same row
 	# column offset depends on colums of each spouse
 	printChild(spouseNode,  parentNode,  0)
-	connectSpouses(parentNode.id,  spouseNode.id)
+	connectSpouses(spouseInfo)
 	printNodes(spouseNode,  parentNode)
 
 
@@ -512,10 +535,10 @@ except Warning as e:
 
 
 # print the tree out (third stage)
-print('\\begin{tikzpicture}[inner sep=0pt]')
+print('\\begin{tikzpicture}')
 # TODO shapes
 # recangle with round edges
-print("\t\\tikzstyle{child} = [minimum height=2.3cm, rectangle, draw=black, text centered, text width=" + str(NODE_WIDTH) + "cm]")
+print("\t\\tikzstyle{child} = [inner sep=0pt, minimum height=2.3cm, rectangle, draw=black, text centered, text width=" + str(NODE_WIDTH) + "cm]")
 printChild(allChildNodes[0])
 printNodes(allChildNodes[0],  None)
 print('\\end{tikzpicture}')
