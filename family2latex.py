@@ -217,7 +217,7 @@ def processChildren(parentXml,  parentNode):
 		else:
 			raise Error("ERR: Not more than 2 spouses are supported!")
 		
-		updateColumnTillSpouse(spouseNode,  parentNode,  columnOffset,  spouseNode.row)
+		updateColumnTillSpouse(spouseNode,  parentNode,  columnOffset,  spouseNode.row,  spouseNode)
 	
 	# process children of this mother
 	childrenXml = parentXml.findall('child')
@@ -232,9 +232,15 @@ def processChildren(parentXml,  parentNode):
 		childNr += 1
 
 
-
-def updateColumnTillSpouse(lastNode,  currentNode,  columnOffset,  row=None):
-	if not currentNode:
+# Will update all child nodes in all directions (mother, spouses, children)
+# if stopNode=None spouseLeft will not be used,
+# so there could not happen a reverse update
+def updateColumnTillSpouse(lastNode,  currentNode,  columnOffset,  row=None,  stopNode=None):
+	if currentNode is None:
+		return
+	
+	# stop if stop node is reached
+	if currentNode is stopNode:
 		return
 	
 	# if row is not set
@@ -248,17 +254,25 @@ def updateColumnTillSpouse(lastNode,  currentNode,  columnOffset,  row=None):
 	for childNode in currentNode.children:
 		# do not run the same way back
 		if childNode is not lastNode:
-			updateColumnTillSpouse(currentNode,  childNode,  columnOffset,  row+1)
+			updateColumnTillSpouse(currentNode,  childNode,  columnOffset,  row+1,  stopNode)
 	
 	# update all right spouse too
 	# do not update left spouses,
 	# because these have already the right position
 	# the overlapping will solved by moving to the right and not to the left
 	if (currentNode.getRightSpouseChild() is not None) and (currentNode.getRightSpouseChild() is not lastNode):
-		updateColumnTillSpouse(currentNode,  currentNode.getRightSpouseChild(),  columnOffset,  row)
+		updateColumnTillSpouse(currentNode,  currentNode.getRightSpouseChild(),  columnOffset,  row,  stopNode)
 	
 	if (currentNode.mother is not None) and (currentNode.mother is not lastNode):
-		updateColumnTillSpouse(currentNode,  currentNode.mother,  columnOffset,  row-1)
+		updateColumnTillSpouse(currentNode,  currentNode.mother,  columnOffset,  row-1,  stopNode)
+
+
+	# only follow left spouse,
+	# if a stop node is set
+	# otherwise the hole tree will be updated every time
+	if (stopNode is not None and currentNode.getLeftSpouseChild() is not None and 
+			currentNode.getLeftSpouseChild() is not lastNode):
+		updateColumnTillSpouse(currentNode,  currentNode.getLeftSpouseChild(),  columnOffset,  row,  stopNode)
 
 
 
@@ -487,6 +501,11 @@ def sortByLeftSpouse(node1,  node2):
 # Sorts children of the same mother
 # from left ro right
 def getChildrenOffset(node1,  node2):
+	if node1.mother is None:
+		return None
+	if node2.mother is None:
+		return None
+	
 	# cancle, if there is no same mother
 	if (node1.mother is not node2.mother):
 		return None
