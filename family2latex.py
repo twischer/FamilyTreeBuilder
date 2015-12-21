@@ -233,9 +233,14 @@ def processChildren(parentXml,  parentNode):
 
 
 
-def updateColumnTillSpouse(lastNode,  currentNode,  columnOffset,  row):
+def updateColumnTillSpouse(lastNode,  currentNode,  columnOffset,  row=None):
 	if not currentNode:
 		return
+	
+	# if row is not set
+	# do not change it
+	if row is None:
+		row = currentNode.row
 	
 	currentNode.row = row
 	currentNode.column += columnOffset
@@ -244,6 +249,13 @@ def updateColumnTillSpouse(lastNode,  currentNode,  columnOffset,  row):
 		# do not run the same way back
 		if childNode is not lastNode:
 			updateColumnTillSpouse(currentNode,  childNode,  columnOffset,  row+1)
+	
+	# update all right spouse too
+	# do not update left spouses,
+	# because these have already the right position
+	# the overlapping will solved by moving to the right and not to the left
+	if (currentNode.getRightSpouseChild() is not None) and (currentNode.getRightSpouseChild() is not lastNode):
+		updateColumnTillSpouse(currentNode,  currentNode.getRightSpouseChild(),  columnOffset,  row)
 	
 	if (currentNode.mother is not None) and (currentNode.mother is not lastNode):
 		updateColumnTillSpouse(currentNode,  currentNode.mother,  columnOffset,  row-1)
@@ -305,7 +317,7 @@ def updateColumnTillMultiMother(currentNode,  columnOffset):
 			if currentNode.mother is not None:
 				# stop updating on this mother
 				# So update all upward children
-				updateColumnTillSpouse(currentNode,  currentNode.mother,  motherColumnOffset,  currentNode.mother.row)
+				updateColumnTillSpouse(currentNode,  currentNode.mother,  motherColumnOffset)
 		return
 	
 	currentNode.column += columnOffset
@@ -320,12 +332,16 @@ def updateColumnOfChildren(currentNode,  columnOffset):
 	
 	for childNode in currentNode.children:
 		updateColumnOfChildren(childNode,  columnOffset)
+	
+	# move right spouse with this child
+	if currentNode.getRightSpouseChild() is not None:
+		updateColumnTillSpouse(currentNode,  currentNode.getRightSpouseChild(), columnOffset)
 
 
-def updateColumnOfMoreRightSiblingsAndChildren(mother,  startingChild,  columnOffset):
+def updateColumnOfMoreRightSiblingsAndChildren(startingChild,  columnOffset):
 	# update all sisters and brothers right of this node, too
 	updatingStarted = False
-	for childNode in mother.children:
+	for childNode in startingChild.mother.children:
 		if childNode is startingChild:
 			updatingStarted = True
 		elif updatingStarted is True:
@@ -397,14 +413,13 @@ def fixOverlap(node1,  node2):
 	# the horizontal line can be found under this grand mother
 	rightGrandMother = findRightMotherBelowSameGrandMother(leftNode,  rightNode)
 	if rightGrandMother is not None:
-		sameGrandGrandMother = rightGrandMother.mother
-		updateColumnOfMoreRightSiblingsAndChildren(sameGrandGrandMother,  rightGrandMother,  columnOffset)
+		updateColumnOfMoreRightSiblingsAndChildren(rightGrandMother,  columnOffset)
 	
 	else:
 		# If the children has not any same grand mother
 		# the split point would be a spouses connection
 		# so we can update the hole tree without following spouse connections
-		updateColumnTillSpouse(None,  rightNode,  columnOffset,  rightNode.row)
+		updateColumnTillSpouse(None,  rightNode,  columnOffset)
 	
 	return True
 
