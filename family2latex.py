@@ -557,12 +557,29 @@ except Warning as e:
 
 
 # print the tree out (third stage)
+# find the column of the most left child
+minColumn = 0
+for childNode in allChildNodes:
+	if childNode.column < minColumn:
+		minColumn = childNode.column
+# find the column of the most right child
+maxColumn = 0
+for childNode in allChildNodes:
+	if childNode.column > maxColumn:
+		maxColumn = childNode.column
+# find the child which is nearest to the middle
+midColumn = (maxColumn - minColumn) / 2
+midChildNode = allChildNodes[0]
+for childNode in allChildNodes:
+	if abs(childNode.column - midColumn) < abs(midChildNode.column - midColumn):
+		midChildNode = childNode
+
 print('\\begin{tikzpicture}')
 # TODO shapes
 # recangle with round edges
 print("\t\\tikzstyle{child} = [inner sep=0pt, minimum height=2.6cm, rectangle, draw=black, text centered, text width=" + str(NODE_WIDTH) + "cm]")
-printChild(allChildNodes[0])
-printNodes(allChildNodes[0],  None)
+printChild(midChildNode)
+printNodes(midChildNode,  None)
 print('\\end{tikzpicture}')
 
 exit(exitCode)
