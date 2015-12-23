@@ -54,7 +54,13 @@ class Node :
 		
 		allChildNodes.append(self)
 		pass
-		
+	
+	def __repr__(self):
+		return "<" + self.id + ">"
+	
+	def __str__(self):
+		return self.text
+	
 	def getRightSpouseChild(self):
 		if self.spouseRight is not None:
 			return self.spouseRight.rightSpouse
@@ -284,7 +290,8 @@ def findRightMotherBelowSameGrandMother(leftChild,  rightChild):
 		return None
 	
 	if rightChild.mother is None:
-		return None
+		if rightChild.getRightSpouseChild() is not None:
+			return findRightMotherBelowSameGrandMother(leftChild,  rightChild.getRightSpouseChild())
 	
 	# if the lleft child has no mother
 	# a connection could possibly found over the left spouse of the left child
@@ -405,6 +412,7 @@ def fixOverlap(node1,  node2):
 		raise Warning("Max fix count reached!")
 	fixCounter += 1
 	
+	# TODO return split point too
 	[leftNode,  rightNode] = sortNodesLeftToRight(node1,  node2)
 	if leftNode is None or rightNode is None:
 		return False
@@ -427,6 +435,12 @@ def fixOverlap(node1,  node2):
 	# the horizontal line can be found under this grand mother
 	rightGrandMother = findRightMotherBelowSameGrandMother(leftNode,  rightNode)
 	if rightGrandMother is not None:
+		# if the right spouse look up was used
+		# the right overlapping node will not be updated by calling updateColumnOfMoreRightSiblingsAndChildren
+		# because it will onyl search more right and
+		# the rightNode lies behind a left spouse connection
+		if rightNode.mother is None:
+			rightNode.column += columnOffset
 		updateColumnOfMoreRightSiblingsAndChildren(rightGrandMother,  columnOffset)
 	
 	else:
@@ -438,65 +452,105 @@ def fixOverlap(node1,  node2):
 	return True
 
 
+# returns a list with the child nodes and the row offset between these steps
+def findShortestPath(lastChild, startChild,  endChild):
+	if startChild is None:
+		return None
+		
+	if startChild is endChild:
+		return [ [endChild, 0] ]
+	
+	if startChild.mother is not lastChild:
+		path = findShortestPath(startChild, startChild.mother,  endChild)
+		if path is not None:
+			path.insert(0, [startChild,  -1])
+			return path
+	
+	if startChild.getLeftSpouseChild() is not lastChild:
+		path = findShortestPath(startChild, startChild.getLeftSpouseChild(),  endChild)
+		if path is not None:
+			path.insert(0, [startChild, 0])
+			return path
+	
+	if startChild.getRightSpouseChild() is not lastChild:
+		path = findShortestPath(startChild, startChild.getRightSpouseChild(),  endChild)
+		if path is not None:
+			path.insert(0, [startChild, 0])
+			return path
+	
+	for childNode in startChild.children:
+		if childNode is not lastChild:
+			path = findShortestPath(startChild, childNode,  endChild)
+			if path is not None:
+				path.insert(0, [startChild, 1])
+				return path
+	
+	return None
+
+
 
 def sortNodesLeftToRight(node1,  node2):
-	sorted = sortByLeftSpouse(node1,  node2)
-	if sorted is not None:
-		return sorted
+	path = findShortestPath(None, node1,  node2)
+	if path is None:
+		raise Warning("WRN: No better solution found for fixing overlapping of " + node1.id + " and " + node2.id +
+		". These nodes are not connected.")
 	
-	sorted = sortByLeftSpouse(node2,  node1)
-	if sorted is not None:
-		return sorted
-	
-	# if the other node is the right spouse
-	# this node has to be the left node
-	if node1.getRightSpouseChild() is not None:
-		if node1.getRightSpouseChild() is node2:
-			return [node1,  node2]
-	if node2.getRightSpouseChild() is not None:
-		if node1.getRightSpouseChild() is node1:
-			return [node2,  node1]
-	
-	if not node1.mother:
-		return [node2,  node1]
-	if not node2.mother:
-		return [node1,  node2]
-	
-	# mother lies more right than child
-	# so this child can be shifted to the right
-	if node1.mother.column > node1.column:
-		return [node2,  node1]
-	if node2.mother.column > node2.column:
-		return [node1,  node2]
-	
-	if node1.mother.column > node2.mother.column:
-		return [node2,  node1]
-	if node2.mother.column > node1.mother.column:
-		return [node1,  node2]
-	
-	raise Warning("WRN: No better solution found for fixing overlapping of " + node1.id + " and " + node2.id +
-		". Fixing will be stopped.")
-
-
-
-def sortByLeftSpouse(node1,  node2):
-	# there is a direct connection to the left neighbour
-	# so it would result in a crossing line,
-	# if node1 would be moved
-	if node1.getLeftSpouseChild() is not None:
-		# check if both nodes are married
-		# so the left node has to leave left
-		if node2 is node1.getLeftSpouseChild():
-			return [node2,  node1]
-		else:
-			# check if the spouse is the spilling of the other node
-			childrenOffset = getChildrenOffset(node2,  node1.getLeftSpouseChild())
+	# iterate through the pass till the last children
+	# which define the spliting point are left
+	rowOffset = 0
+	# keep last 3 entries if it is a mother connection
+	# keep last 2 entries if it is a spouse connection
+	while len(path) > 2:
+		# check if the last 3 entries have a spilling connection
+		if len(path) == 3:
+			# it is a mother connection
+			childrenOffset = getChildrenOffset(path[0][0],  path[2][0])
 			if childrenOffset is not None:
 				if childrenOffset > 0:
+					return [node1,  node2]
+				else:
 					return [node2,  node1]
-			
-			return [node1,  node2]
+		
+		# follow from the end child until the children lie on the same row again
+		# in this way the split point lies always near to the starting child
+		if rowOffset != 0:
+			rowOffset += path[-2][1]
+			del path[-1]
+			continue
+		
+		# remove all spouse children on the same row
+		if path[0][1] == 0:
+			del path[0]
+			continue
+		
+		# the last path entry contianes always
+		# the row offset to the next element
+		# so use row offset of second last entry
+		if path[-2][1] == 0:
+			del path[-1]
+			continue
+		
+		# process a upward or downward movment from the starting child
+		rowOffset += path[0][1]
+		del path[0]
+		continue
 	
+	# path contains only two nodes
+	# so compare them and detect witch are more right
+	if len(path) != 2:
+		raise Warning("WRN: No better solution found for fixing overlapping of " + node1.id + " and " + node2.id +
+			". Shortes path could not be processed.")
+			
+	# it is a spouse connection
+	if path[0][0].getRightSpouseChild() is path[1][0]:
+		return [node1, node2]
+	if path[0][0].getLeftSpouseChild() is path[1][0]:
+		return [node2, node1]
+
+	raise Warning("WRN: No better solution found for fixing overlapping of " + node1.id + " and " + node2.id +
+			". The nodes are not married.")
+
+
 
 # Sorts children of the same mother
 # from left ro right
@@ -596,7 +650,7 @@ for childNode in allChildNodes:
 print('\\begin{tikzpicture}')
 # TODO shapes
 # recangle with round edges
-print("\t\\tikzstyle{child} = [inner sep=0pt, minimum height=2.6cm, rectangle, draw=black, text centered, text width=" + str(NODE_WIDTH) + "cm]")
+print("\t\\tikzstyle{child} = [inner sep=0pt, minimum height=3cm, rectangle, draw=black, text centered, text width=" + str(NODE_WIDTH) + "cm]")
 printChild(midChildNode)
 printNodes(midChildNode,  None)
 print('\\end{tikzpicture}')
