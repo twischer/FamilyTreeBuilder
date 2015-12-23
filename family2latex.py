@@ -162,10 +162,12 @@ def getChildDescription(xmlNode):
 	# second first wedding
 	# death name is always the full name
 	
-	text += "\\\\ \\textborn " + xmlNode.get('birth',  "UNKOWN")
-	birthPlace = xmlNode.get('birthplace')
-	if birthPlace is not None:
-		text += "\\\\ " + birthPlace
+	birth = xmlNode.get('birth')
+	if birth is not None:
+		text += "\\\\ \\textborn " + birth
+		birthPlace = xmlNode.get('birthplace')
+		if birthPlace is not None:
+			text += "\\\\ " + birthPlace
 	
 	death = xmlNode.get('death')
 	if death is not None:
@@ -620,6 +622,11 @@ except Warning as e:
 	# an overlapp could not be fixed
 	print(e, file=sys.stderr)
 
+
+# spouse minimieren solange keine overlapping
+
+# mütter zentrieren solange keine overlapping
+# diese reinfolge da damit mehr zusammen gestaucht
 
 # print the tree out (third stage)
 # find the column of the most left child
