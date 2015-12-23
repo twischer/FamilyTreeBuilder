@@ -8,7 +8,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 # in columns
-NODE_SPOUSE_COL_SPACE = 0.5
+NODE_SPOUSE_COL_SPACE = 1.5
 
 # in cm
 NODE_WIDTH = 5.0
@@ -215,11 +215,11 @@ def processChildren(parentXml,  parentNode):
 		if not spouseNode.spouseRight:
 			# connect spouses bidirectional to the right
 			SpouseNode(spouseTagXml, spouseNode, parentNode)
-			columnOffset += 1 + NODE_SPOUSE_COL_SPACE
+			columnOffset +=  NODE_SPOUSE_COL_SPACE
 		elif not spouseNode.spouseLeft:
 			# connect spouses bidirectional to the left
 			SpouseNode(spouseTagXml, parentNode, spouseNode)
-			columnOffset -= 1 + NODE_SPOUSE_COL_SPACE
+			columnOffset -=  NODE_SPOUSE_COL_SPACE
 		else:
 			raise Error("ERR: Not more than 2 spouses are supported!")
 		
@@ -389,7 +389,7 @@ def checkOverlapps():
 		for node2 in allChildNodes:
 			if (node1 is not node2 and node1.row == node2.row):
 				columnOffset = abs(node1.column - node2.column)
-				if columnOffset < (1 + NODE_SPOUSE_COL_SPACE) and areChildrenMarried(node1,  node2):
+				if columnOffset < NODE_SPOUSE_COL_SPACE and areChildrenMarried(node1,  node2):
 					# between two spouses a spacing of NODE_SPOUSE_COL_SPACE columns is needed
 					# for the text
 					return fixOverlap(node1,  node2)
@@ -412,44 +412,32 @@ def fixOverlap(node1,  node2):
 		raise Warning("Max fix count reached!")
 	fixCounter += 1
 	
-	# TODO return split point too
-	[leftNode,  rightNode] = sortNodesLeftToRight(node1,  node2)
+	[leftNode,  rightNode, leftSplit, rightSplit] = sortNodesLeftToRight(node1,  node2)
 	if leftNode is None or rightNode is None:
 		return False
 	
 	print("Fixing overlapping of "+ leftNode.id + " " + str(leftNode.column) + " and " + 
-		rightNode.id + " " + str(rightNode.column), file=sys.stderr)
+		rightNode.id + " " + str(rightNode.column) + " Splitting " + leftSplit.id + " " + rightSplit.id, file=sys.stderr)
 	
 	# only 0.5 column shift is needed
 	# do only 0.5 shift
 	columnOffset = leftNode.column - rightNode.column + 1
 	
 	# add extra spacing if these children are connected because of marry
-	if areChildrenMarried(leftNode,  rightNode):
-		columnOffset += NODE_SPOUSE_COL_SPACE
+	if areChildrenMarried(leftNode,  rightNode) and columnOffset < NODE_SPOUSE_COL_SPACE:
+		columnOffset = NODE_SPOUSE_COL_SPACE
 	
 	
-	# find the correct slit point.
-	# Over the slitting child a horizontal line has to be exist.
-	# If both children have a same grand mother,
-	# the horizontal line can be found under this grand mother
-	rightGrandMother = findRightMotherBelowSameGrandMother(leftNode,  rightNode)
-	if rightGrandMother is not None:
-		# if the right spouse look up was used
-		# the right overlapping node will not be updated by calling updateColumnOfMoreRightSiblingsAndChildren
-		# because it will onyl search more right and
-		# the rightNode lies behind a left spouse connection
-		if rightNode.mother is None:
-			rightNode.column += columnOffset
-		updateColumnOfMoreRightSiblingsAndChildren(rightGrandMother,  columnOffset)
-	
+	# check if the splitting point is a mother connection
+	if leftSplit.mother is not None and leftSplit.mother is rightSplit.mother:
+		updateColumnTillSpouse(rightSplit.mother, rightSplit, columnOffset, rightSplit.row, rightSplit.mother)
 	else:
-		# If the children has not any same grand mother
-		# the split point would be a spouses connection
-		# so we can update the hole tree without following spouse connections
-		updateColumnTillSpouse(None,  rightNode,  columnOffset)
+		# update for a spouse connection
+		updateColumnTillSpouse(leftSplit, rightSplit, columnOffset, rightSplit.row, leftSplit)
 	
 	return True
+
+
 
 
 # returns a list with the child nodes and the row offset between these steps
@@ -488,7 +476,11 @@ def findShortestPath(lastChild, startChild,  endChild):
 	return None
 
 
-
+# returns a list which is containing the following child nodes
+# 0 more left child of node1 and node2
+# 1 more right child of node1 and node2
+# 2 left child of splitting point
+# 3 right child of splitting point
 def sortNodesLeftToRight(node1,  node2):
 	path = findShortestPath(None, node1,  node2)
 	if path is None:
@@ -507,9 +499,9 @@ def sortNodesLeftToRight(node1,  node2):
 			childrenOffset = getChildrenOffset(path[0][0],  path[2][0])
 			if childrenOffset is not None:
 				if childrenOffset > 0:
-					return [node1,  node2]
+					return [node1,  node2, path[0][0], path[2][0]]
 				else:
-					return [node2,  node1]
+					return [node2,  node1, path[2][0],  path[0][0]]
 		
 		# follow from the end child until the children lie on the same row again
 		# in this way the split point lies always near to the starting child
@@ -543,9 +535,9 @@ def sortNodesLeftToRight(node1,  node2):
 			
 	# it is a spouse connection
 	if path[0][0].getRightSpouseChild() is path[1][0]:
-		return [node1, node2]
+		return [node1, node2, path[0][0], path[1][0]]
 	if path[0][0].getLeftSpouseChild() is path[1][0]:
-		return [node2, node1]
+		return [node2, node1, path[1][0], path[0][0]]
 
 	raise Warning("WRN: No better solution found for fixing overlapping of " + node1.id + " and " + node2.id +
 			". The nodes are not married.")
