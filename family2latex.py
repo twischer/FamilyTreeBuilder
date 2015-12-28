@@ -350,38 +350,6 @@ def updateColumnTillMultiMother(currentNode,  columnOffset):
 
 
 
-def updateColumnOfChildren(currentNode,  columnOffset):
-	currentNode.column += columnOffset
-	
-	for childNode in currentNode.children:
-		updateColumnOfChildren(childNode,  columnOffset)
-	
-	# move right spouse with this child
-	if currentNode.getRightSpouseChild() is not None:
-		updateColumnTillSpouse(currentNode,  currentNode.getRightSpouseChild(), columnOffset)
-
-
-def updateColumnOfMoreRightSiblingsAndChildren(startingChild,  columnOffset):
-	# update all sisters and brothers right of this node, too
-	updatingStarted = False
-	for childNode in startingChild.mother.children:
-		if childNode is startingChild:
-			updatingStarted = True
-		elif updatingStarted is True:
-			updateColumnOfChildren(childNode,  columnOffset)
-	
-	# update all children of this node
-	updateColumnOfChildren(startingChild,  columnOffset)
-		
-	# TODO center grandgrand mother between children
-	# and update all above nodes
-	# TODO update above right children, too
-	#only updates upward till a mother with more than one child
-	# -> horizontal connection
-#	updateColumnTillMultiMother(rightNode.mother,  columnOffset)
-
-
-
 def areChildrenMarried(node1,  node2):
 	return node1.getRightSpouseChild() is node2 or node1.getLeftSpouseChild() is node2
 
@@ -431,8 +399,14 @@ def fixOverlap(node1,  node2):
 	
 	
 	# check if the splitting point is a mother connection
-	if leftSplit.mother is not None and leftSplit.mother is rightSplit.mother:
-		updateColumnTillSpouse(rightSplit.mother, rightSplit, columnOffset, rightSplit.row, rightSplit.mother)
+	mother = rightSplit.mother
+	if leftSplit.mother is not None and leftSplit.mother is mother:
+		# updating all right children starting with the more right child
+		updatingStarted = False
+		for childNode in mother.children:
+			if updatingStarted is True or childNode is rightSplit:
+				updatingStarted = True
+				updateColumnTillSpouse(mother, childNode, columnOffset, childNode.row, mother)
 	else:
 		# update for a spouse connection
 		updateColumnTillSpouse(leftSplit, rightSplit, columnOffset, rightSplit.row, leftSplit)
