@@ -12,8 +12,8 @@ NODE_SPOUSE_COL_SPACE = 1.5
 
 # in cm
 NODE_WIDTH = 5.0
-NODE_HSPACE = 0.2
-NODE_VSPACE = 0.5
+NODE_HSPACE = 0.4
+NODE_VSPACE = 0.8
 
 MAX_FIX_OVERLAP_ITERATIONS = 100
 
@@ -41,12 +41,17 @@ class Node :
 	def __init__(self,  xml,  mother,  offset) :
 		self.id = getUniqId(xml)
 		self.text = getChildDescription(xml)
+		self.woman = False
 		self.mother = mother
 		self.spouseRight = None
 		self.spouseLeft = None
 		self.children = []
 		self.row = 0
 		self.column = 0
+		
+		sex = xml.get("sex")
+		if sex is not None and sex == "woman":
+			self.woman = True
 		
 		if mother is not None:
 			self.row = mother.row + 1
@@ -112,6 +117,12 @@ def  printNode(childNode,  parentNode=None,  aboveOffset=None,  belowOffset=None
 	# \node[below left=0.5 and 0.2 of mother1] (child1) {Kind 1};
 	print('\t\\node[child',  end="") 
 	
+	if childNode.woman is True:
+		print(', woman',  end="") 
+	else:
+		print(', man',  end="") 
+	
+	
 	# only use relative postioning,
 	# if a mother exists
 	if parentNode is not None:
@@ -141,7 +152,7 @@ def connectParentChild(motherId,  childId):
 	# print tikiz line for connecting mother with the child
 	# \draw[thick] (mother1) |- ($ (child1.north) + (0,0.25) $) -- (child1);
 	print('\t\\draw[thick] (' + motherId + ') |- ($ (',  end="")
-	print(childId + '.north) + (0,0.25) $) -- (' + childId + ');')
+	print(childId + '.north) + (0,' + str(NODE_VSPACE / 2) + ') $) -- (' + childId + ');')
 	
 
 def connectSpouses(spouseInfo):
@@ -621,9 +632,12 @@ for childNode in allChildNodes:
 		midChildNode = childNode
 
 print('\\begin{tikzpicture}')
-# TODO shapes
-# recangle with round edges
-print("\t\\tikzstyle{child} = [inner sep=0pt, minimum height=3cm, rectangle, draw=black, text centered, text width=" + str(NODE_WIDTH) + "cm]")
+print("\t\\tikzstyle{man}   = [outer color=blue!60, inner color=blue!30]")
+print("\t\\tikzstyle{woman} = [outer color=orange!60, inner color=orange!30]")
+print("\t\\tikzstyle{child} = [inner sep=0pt, minimum height=3cm, rectangle, draw=black, rounded corners=10pt, " +
+	"text centered, text width=" + str(NODE_WIDTH) + "cm, " +
+	"drop shadow={top color=black, bottom color=white, shadow xshift=" + str(NODE_HSPACE / 2) + "cm, shadow yshift=-" + 
+	str(NODE_HSPACE / 2) + "cm}]")
 printChild(midChildNode)
 printNodes(midChildNode,  None)
 print('\\end{tikzpicture}')
