@@ -13,15 +13,15 @@
 \usetikzlibrary{positioning, arrows, calc, shadows, fadings}
 
 \tikzset{
-	lines/.style={
+	linecolor/.style={
 		draw=black,
 	},
-	every path/.style={
-        lines,
-        thick,
-    },
+	edges/.style={
+		linecolor,
+		very thick,
+	},
 	child/.style={
-		lines, 
+		linecolor,
 		inner sep=0pt, 
 		minimum height=3cm, 
 		rectangle, 

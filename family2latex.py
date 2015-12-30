@@ -151,23 +151,23 @@ def  printNode(childNode,  parentNode=None,  aboveOffset=None,  belowOffset=None
 	print('] (' + childNode.id + ') {' + childNode.text + '};')
 	
 	if ADD_RECT_TO_EACH_CHILD_CORNER is True:
-		print("\t\\node[lines, above left=-0.05em and -0.05em of " + childNode.id + "] {};")
-		print("\t\\node[lines, above right=-0.05em and -0.05em of " + childNode.id + "] {};")
-		print("\t\\node[lines, below left=-0.05em and -0.05em of " + childNode.id + "] {};")
-		print("\t\\node[lines, below right=-0.05em and -0.05em of " + childNode.id + "] {};")
+		print("\t\\node[cornernodes, above left=-0.05em and -0.05em of " + childNode.id + "] {};")
+		print("\t\\node[cornernodes, above right=-0.05em and -0.05em of " + childNode.id + "] {};")
+		print("\t\\node[cornernodes, below left=-0.05em and -0.05em of " + childNode.id + "] {};")
+		print("\t\\node[cornernodes, below right=-0.05em and -0.05em of " + childNode.id + "] {};")
 	
 	
 def connectParentChild(motherId,  childId):
 	# print tikiz line for connecting mother with the child
 	# \draw[thick] (mother1) |- ($ (child1.north) + (0,0.25) $) -- (child1);
-	print('\t\\draw (' + motherId + ') |- ($ (',  end="")
+	print('\t\\draw[edges] (' + motherId + ') |- ($ (',  end="")
 	print(childId + '.north) + (0,' + str(NODE_VSPACE / 2) + ') $) -- (' + childId + ');')
 	
 
 def connectSpouses(spouseInfo):
 	# print tikiz line for connecting married persons
 	# \draw[thick] (mother1) -- (father1);
-	print('\t\\draw (' + spouseInfo.leftSpouse.id + ') -- node[above]{\\textmarried ' +
+	print('\t\\draw[edges] (' + spouseInfo.leftSpouse.id + ') -- node[above]{\\textmarried ' +
 		spouseInfo.weddingDay + '} node[below]{' +
 		spouseInfo.weddingPlace + '} ++(' + spouseInfo.rightSpouse.id + ');')
 
