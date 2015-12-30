@@ -1,0 +1,42 @@
+\documentclass[draft=false
+              ,paper=a1
+              ,landscape
+              ,twoside=false
+              ,fontsize=10pt
+              ]{scrbook}
+\usepackage[ngerman,english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{textcomp}
+\usepackage[paperwidth=250cm, paperheight=60cm]{geometry}
+
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows, calc, shadows, fadings}
+
+\definecolor{goldenpoppy}{rgb}{0.99, 0.76, 0.0}
+
+\tikzset{
+	lines/.style={
+		draw=goldenpoppy,
+	},
+	every path/.style={
+        lines,
+    },
+	child/.style={
+		lines, 
+		inner sep=0pt, 
+		minimum height=3cm, 
+		rectangle, 
+		text centered, 
+		text width=5.0cm,
+	},
+	man/.style={
+		child,
+	},
+	woman/.style={
+		child,
+	},
+}
+
+\begin{document}
+\include{family}
+\end{document}
