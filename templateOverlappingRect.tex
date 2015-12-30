@@ -1,0 +1,49 @@
+\documentclass[draft=false
+              ,paper=a1
+              ,landscape
+              ,twoside=false
+              ,fontsize=10pt
+              ]{scrbook}
+\usepackage[ngerman,english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{textcomp}
+\usepackage[paperwidth=250cm, paperheight=60cm]{geometry}
+
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows, calc, shadows, fadings}
+
+\definecolor{goldenpoppy}{rgb}{0.99, 0.76, 0.0}
+\definecolor{goldenrod}{rgb}{0.85, 0.65, 0.13}
+
+\tikzset{
+	linecolor/.style={
+		draw=goldenrod,
+	},
+	edges/.style={
+        draw=goldenpoppy,
+        thick,
+    },
+	child/.style={
+		linecolor, 
+		inner sep=0pt, 
+		minimum height=3.3cm, 
+		rectangle, 
+		text centered, 
+		text width=5.0cm,
+	},
+    overnodes/.style={
+    	child,
+    	minimum height=3.0cm, 
+    	text width=5.3cm,
+    },
+	man/.style={
+		child,
+	},
+	woman/.style={
+		child,
+	},
+}
+
+\begin{document}
+\include{family}
+\end{document}

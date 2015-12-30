@@ -15,8 +15,9 @@ NODE_WIDTH = 5.0
 NODE_HSPACE = 0.4
 NODE_VSPACE = 0.8
 
-# uset for the golden template
+# used for the golden template
 ADD_RECT_TO_EACH_CHILD_CORNER = False
+ADD_RECT_UNDER_CHILD = False
 
 MAX_FIX_OVERLAP_ITERATIONS = 100
 
@@ -125,6 +126,9 @@ def  printNode(childNode,  parentNode=None,  aboveOffset=None,  belowOffset=None
 	else:
 		print('man',  end="") 
 	
+	# TODO using
+	#\node (C) at ([yshift=1cm]A) {C};
+	#\node (D) at ([shift=({1cm,1cm})]A) {D};
 	
 	# only use relative postioning,
 	# if a mother exists
@@ -155,6 +159,9 @@ def  printNode(childNode,  parentNode=None,  aboveOffset=None,  belowOffset=None
 		print("\t\\node[cornernodes, above right=-0.05em and -0.05em of " + childNode.id + "] {};")
 		print("\t\\node[cornernodes, below left=-0.05em and -0.05em of " + childNode.id + "] {};")
 		print("\t\\node[cornernodes, below right=-0.05em and -0.05em of " + childNode.id + "] {};")
+		
+	if ADD_RECT_UNDER_CHILD is True:
+		print("\t\\node[overnodes] at (" + childNode.id + ") {};")
 	
 	
 def connectParentChild(motherId,  childId):

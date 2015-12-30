@@ -1,6 +1,7 @@
 #! /bin/bash
 TEMPLATE="templateFading"
 #TEMPLATE="templateGolden"
+#TEMPLATE="templateOverlappingRect"
 
 
 while [ 1 ]
