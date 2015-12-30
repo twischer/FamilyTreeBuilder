@@ -12,10 +12,41 @@
 \usepackage{tikz}
 \usetikzlibrary{positioning, arrows, calc, shadows, fadings}
 
-\definecolor{goldenpoppy}{rgb}{0.99, 0.76, 0.0}
+\tikzset{
+	lines/.style={
+		draw=black,
+	},
+	every path/.style={
+        lines,
+        thick,
+    },
+	child/.style={
+		lines, 
+		inner sep=0pt, 
+		minimum height=3cm, 
+		rectangle, 
+		text centered, 
+		text width=5.0cm,
+		rounded corners=10pt,
+		drop shadow={
+			top color=black,
+			bottom color=white,
+			shadow xshift=0.2cm,
+			shadow yshift=-0.2cm
+		},
+	},
+	man/.style={
+		child,
+		outer color=blue!60,
+		inner color=blue!30,
+	},
+	woman/.style={
+		child,
+		outer color=orange!60,
+		inner color=orange!30,
+	},
+}
 
 \begin{document}
-
 \include{family}
-
 \end{document}

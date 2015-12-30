@@ -15,6 +15,9 @@ NODE_WIDTH = 5.0
 NODE_HSPACE = 0.4
 NODE_VSPACE = 0.8
 
+# uset for the golden template
+ADD_RECT_TO_EACH_CHILD_CORNER = False
+
 MAX_FIX_OVERLAP_ITERATIONS = 100
 
 DEBUG_MAX_FIXES = -1
@@ -115,12 +118,12 @@ def printChild(childNode,  parentNode=None,  rowOffset=1):
 def  printNode(childNode,  parentNode=None,  aboveOffset=None,  belowOffset=None,  leftOffset=None,  rightOffset=None):
 	# print tkiz node similar to
 	# \node[below left=0.5 and 0.2 of mother1] (child1) {Kind 1};
-	print('\t\\node[child',  end="") 
+	print('\t\\node[',  end="") 
 	
 	if childNode.woman is True:
-		print(', woman',  end="") 
+		print('woman',  end="") 
 	else:
-		print(', man',  end="") 
+		print('man',  end="") 
 	
 	
 	# only use relative postioning,
@@ -147,18 +150,24 @@ def  printNode(childNode,  parentNode=None,  aboveOffset=None,  belowOffset=None
 	
 	print('] (' + childNode.id + ') {' + childNode.text + '};')
 	
+	if ADD_RECT_TO_EACH_CHILD_CORNER is True:
+		print("\t\\node[lines, above left=-0.05em and -0.05em of " + childNode.id + "] {};")
+		print("\t\\node[lines, above right=-0.05em and -0.05em of " + childNode.id + "] {};")
+		print("\t\\node[lines, below left=-0.05em and -0.05em of " + childNode.id + "] {};")
+		print("\t\\node[lines, below right=-0.05em and -0.05em of " + childNode.id + "] {};")
+	
 	
 def connectParentChild(motherId,  childId):
 	# print tikiz line for connecting mother with the child
 	# \draw[thick] (mother1) |- ($ (child1.north) + (0,0.25) $) -- (child1);
-	print('\t\\draw[thick] (' + motherId + ') |- ($ (',  end="")
+	print('\t\\draw (' + motherId + ') |- ($ (',  end="")
 	print(childId + '.north) + (0,' + str(NODE_VSPACE / 2) + ') $) -- (' + childId + ');')
 	
 
 def connectSpouses(spouseInfo):
 	# print tikiz line for connecting married persons
 	# \draw[thick] (mother1) -- (father1);
-	print('\t\\draw[thick] (' + spouseInfo.leftSpouse.id + ') -- node[above]{\\textmarried ' +
+	print('\t\\draw (' + spouseInfo.leftSpouse.id + ') -- node[above]{\\textmarried ' +
 		spouseInfo.weddingDay + '} node[below]{' +
 		spouseInfo.weddingPlace + '} ++(' + spouseInfo.rightSpouse.id + ');')
 
@@ -632,12 +641,6 @@ for childNode in allChildNodes:
 		midChildNode = childNode
 
 print('\\begin{tikzpicture}')
-print("\t\\tikzstyle{man}   = [outer color=blue!60, inner color=blue!30]")
-print("\t\\tikzstyle{woman} = [outer color=orange!60, inner color=orange!30]")
-print("\t\\tikzstyle{child} = [inner sep=0pt, minimum height=3cm, rectangle, draw=black, rounded corners=10pt, " +
-	"text centered, text width=" + str(NODE_WIDTH) + "cm, " +
-	"drop shadow={top color=black, bottom color=white, shadow xshift=" + str(NODE_HSPACE / 2) + "cm, shadow yshift=-" + 
-	str(NODE_HSPACE / 2) + "cm}]")
 printChild(midChildNode)
 printNodes(midChildNode,  None)
 print('\\end{tikzpicture}')
